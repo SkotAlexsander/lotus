@@ -15,10 +15,14 @@ navegador, sem instalar nada e sem internet depois de carregar.
   que não veio da Play Store; ele não pede nenhuma permissão e não acessa a rede).
 
 <p align="center">
-  <img src="capturas/mapa.png" width="30%" alt="O mapa com as terapeutas da região">
-  <img src="capturas/card.png" width="30%" alt="Card resumido ao tocar num pino">
+  <img src="capturas/mapa.png" width="30%" alt="O mapa de ruas reais com as terapeutas da região">
+  <img src="capturas/card.png" width="30%" alt="Card resumido ao tocar num pino, sobre o bairro de verdade">
   <img src="capturas/perfil.png" width="30%" alt="Perfil completo da terapeuta">
 </p>
+
+<p align="center"><sub>Capturas do aplicativo Android rodando num Pixel 6. Sem internet
+(e sem cache), o mapa de ruas dá lugar a um traçado desenhado por código e o app
+continua inteiro — <a href="capturas/plano-b.png">é este aqui</a>.</sub></p>
 
 ---
 

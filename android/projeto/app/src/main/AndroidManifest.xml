@@ -1,16 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- NENHUMA permissão. Nem INTERNET.
+    <!-- UMA permissão só: INTERNET, e ela existe por UM motivo — o mapa de
+         ruas de verdade (MapLibre + OpenFreeMap).
 
-         Este protótipo roda inteiro de dentro do pacote: o mapa é desenhado
-         por código, as fontes estão embutidas e as 12 terapeutas são ficção
-         num arquivo JavaScript. Não há para onde mandar nada, e sem a
-         permissão de internet o aparelho garante isso — não é promessa, é
-         o sistema operacional recusando.
+         Ela NÃO estava aqui até 23/08. Foi acrescentada quando o mapa real
+         entrou, porque um aplicativo que mostra um mapa diferente do site
+         confunde quem está testando os dois.
 
-         O botão do WhatsApp não precisa dela: ele entrega o link ao Android,
-         que abre o app de mensagens. Quem acessa a rede é o WhatsApp. -->
+         O que continua valendo:
+           · as 12 terapeutas são ficção num arquivo JavaScript, dentro do pacote
+           · as fontes estão embutidas — tipografia não depende da rede
+           · nada do aparelho sai: não há login, não há envio, não há análise
+           · sem internet o app CAI no mapa desenhado e continua inteiro
+
+         O que NÃO é pedido, de propósito: localização, câmera, contatos,
+         armazenamento, notificação. O botão do WhatsApp não precisa de nenhuma
+         delas — ele entrega o link ao Android, e quem acessa a rede é o
+         WhatsApp. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:label="@string/app_name"
