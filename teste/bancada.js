@@ -12,7 +12,14 @@ const { chromium, devices } = require('../ferramentas/achar_playwright')();
 const path = require('path');
 const fs = require('fs');
 
-const ARQUIVO = 'file:///' + path.join(__dirname, '..', 'prototipo', 'index.html').replace(/\\/g, '/');
+/* Por padrão prova o arquivo do disco. Com `--url <endereço>` prova O QUE ESTÁ
+   NO AR — que é outra coisa: servido por HTTPS, passando por CDN, com o tipo de
+   conteúdo e os cabeçalhos que o servidor decidir. Arquivo certo no disco não
+   prova página certa no endereço. */
+const iUrl = process.argv.indexOf('--url');
+const ARQUIVO = iUrl > -1
+  ? process.argv[iUrl + 1]
+  : 'file:///' + path.join(__dirname, '..', 'prototipo', 'index.html').replace(/\\/g, '/');
 const FOTOS = path.join(__dirname, 'fotos');
 const VER = process.argv.includes('--ver');
 

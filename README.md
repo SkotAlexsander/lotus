@@ -5,8 +5,14 @@ atende **perto de você** — com valores claros, horário de atendimento e aval
 de quem já foi.
 
 **[▶ Abrir o protótipo](https://skotalexsander.github.io/lotus/)** — roda no
-navegador, sem instalar nada. No celular, funciona melhor ainda: dá para adicionar
-à tela de início e usar como aplicativo.
+navegador, sem instalar nada e sem internet depois de carregar.
+
+- **iPhone:** abra o endereço acima no **Safari** → Compartilhar → *Adicionar à
+  Tela de Início*. Abre em tela cheia, com ícone próprio.
+- **Android:** dá para fazer o mesmo pelo Chrome, ou instalar o aplicativo:
+  **[baixar o APK](https://github.com/SkotAlexsander/lotus/releases/latest/download/mapa-holistico.apk)**
+  (o Android vai avisar que é de fonte desconhecida — é o esperado para aplicativo
+  que não veio da Play Store; ele não pede nenhuma permissão e não acessa a rede).
 
 <p align="center">
   <img src="capturas/mapa.png" width="30%" alt="O mapa com as terapeutas da região">
