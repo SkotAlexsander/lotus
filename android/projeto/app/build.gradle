@@ -1,0 +1,46 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace "io.github.skotalexsander.mapaholistico"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "io.github.skotalexsander.mapaholistico"
+
+        // minSdk 24 (Android 7): o WebView se atualiza sozinho pela Play Store,
+        // mas abaixo disso o aparelho pode estar preso num WebView antigo demais
+        // para `backdrop-filter` e `dvh` — e o proprio protótipo perderia a cara.
+        minSdk 24
+        targetSdk 36
+
+        versionCode 1
+        versionName "0.1.0"
+    }
+
+    buildTypes {
+        // Protótipo de Fase 0: so `debug`. Nao ha chave de assinatura para
+        // guardar nem para perder — este APK e para testar e jogar fora. Quando
+        // virar app de verdade (Fase 1), entra `release` com chave propria,
+        // guardada FORA do repositorio, como no projeto Prato.
+        debug {
+            minifyEnabled false
+            applicationIdSuffix ""
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // O protótipo ja vem comprimido; nao ha nada a ganhar recomprimindo.
+    androidResources {
+        noCompress 'html'
+    }
+}
+
+dependencies {
+    // WebViewAssetLoader: serve os arquivos do pacote numa origem https,
+    // que e o que faz o Android tratar o app como contexto seguro.
+    implementation 'androidx.webkit:webkit:1.12.1'
+}

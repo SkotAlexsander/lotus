@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- NENHUMA permissão. Nem INTERNET.
+
+         Este protótipo roda inteiro de dentro do pacote: o mapa é desenhado
+         por código, as fontes estão embutidas e as 12 terapeutas são ficção
+         num arquivo JavaScript. Não há para onde mandar nada, e sem a
+         permissão de internet o aparelho garante isso — não é promessa, é
+         o sistema operacional recusando.
+
+         O botão do WhatsApp não precisa dela: ele entrega o link ao Android,
+         que abre o app de mensagens. Quem acessa a rede é o WhatsApp. -->
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:theme="@style/TemaMapaHolistico"
+        android:hardwareAccelerated="true"
+        android:enableOnBackInvokedCallback="true"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+</manifest>

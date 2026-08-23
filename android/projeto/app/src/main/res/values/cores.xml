@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Os mesmos valores dos tokens do 01-estilo.css. Divergir aqui deixa
+         uma emenda de dois violetas diferentes entre a janela e a pagina. -->
+    <color name="abertura">#4A2F7B</color>
+    <color name="violeta">#5B3E8E</color>
+</resources>

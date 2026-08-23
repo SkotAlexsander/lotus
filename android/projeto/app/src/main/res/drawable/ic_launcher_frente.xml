@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Frente do icone adaptativo: a flor de lotus da marca, em vetor.
+     A mesma petala do protótipo (05-telas.js). Mudou la, mude aqui. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.62" android:scaleY="0.62"
+           android:translateX="34.16" android:translateY="34.16">
+      <group android:rotation="-74" android:pivotX="32" android:pivotY="46">
+        <path android:fillColor="#FFFFFF" android:fillAlpha="0.42" android:pathData="M32 9 C25.2 19.5 23 32 25.8 44.4 C27.8 48.2 36.2 48.2 38.2 44.4 C41 32 38.8 19.5 32 9 Z" />
+      </group>
+      <group android:rotation="74" android:pivotX="32" android:pivotY="46">
+        <path android:fillColor="#FFFFFF" android:fillAlpha="0.42" android:pathData="M32 9 C25.2 19.5 23 32 25.8 44.4 C27.8 48.2 36.2 48.2 38.2 44.4 C41 32 38.8 19.5 32 9 Z" />
+      </group>
+      <group android:rotation="-38" android:pivotX="32" android:pivotY="46">
+        <path android:fillColor="#FFFFFF" android:fillAlpha="0.68" android:pathData="M32 9 C25.2 19.5 23 32 25.8 44.4 C27.8 48.2 36.2 48.2 38.2 44.4 C41 32 38.8 19.5 32 9 Z" />
+      </group>
+      <group android:rotation="38" android:pivotX="32" android:pivotY="46">
+        <path android:fillColor="#FFFFFF" android:fillAlpha="0.68" android:pathData="M32 9 C25.2 19.5 23 32 25.8 44.4 C27.8 48.2 36.2 48.2 38.2 44.4 C41 32 38.8 19.5 32 9 Z" />
+      </group>
+      <group android:rotation="0" android:pivotX="32" android:pivotY="46">
+        <path android:fillColor="#FFFFFF" android:fillAlpha="1.0" android:pathData="M32 9 C25.2 19.5 23 32 25.8 44.4 C27.8 48.2 36.2 48.2 38.2 44.4 C41 32 38.8 19.5 32 9 Z" />
+      </group>
+      <path android:fillColor="#FFFFFF" android:fillAlpha="0.3"
+            android:pathData="M46.5,49.5 a14.5,3.6 0 1,0 -29,0 a14.5,3.6 0 1,0 29,0 Z" />
+    </group>
+</vector>

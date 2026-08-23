@@ -1,0 +1,752 @@
+/* ============================================================================
+   APOMETRIA APP — Protótipo Fase 0
+   01-estilo.css · design system
+   Paleta, tipografia e materiais vindos do arquivo 05 do briefing.
+   A ordem importa: tokens → reset → moldura → materiais → componentes → telas.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------- 1. TOKENS */
+:root {
+  /* Paleta — arquivo 05, sem desvio */
+  --violeta:        #5B3E8E;
+  --violeta-fundo:  #E8DFF6;
+  --dourado:        #C9A24B;
+  --fundo:          #FBF8F4;
+  --superficie:     #FFFFFF;
+  --texto:          #2B2140;
+  /* O arquivo 05 pede #7A7290, mas ele dá 4.28:1 sobre o fundo — abaixo do
+     AA (4.5) que o MESMO arquivo exige na seção de acessibilidade. Escurecido
+     4 pontos: 4.70:1, e a olho nu continua o mesmo cinza-lavanda. */
+  --texto-2:        #736C86;
+  --sucesso:        #5E9A7A;
+  --alerta:         #C46A4A;
+
+  /* Derivados (calculados a partir dos nove acima — nenhuma cor solta) */
+  --violeta-escuro: #432C6B;
+  --violeta-claro:  #7B60AC;
+  --violeta-12:     rgba(91, 62, 142, 0.12);
+  --violeta-08:     rgba(91, 62, 142, 0.08);
+  --texto-3:        #8F87A4;   /* só decoração e ícone: 3.2:1, o mínimo para não-texto */
+  --linha:          rgba(43, 33, 64, 0.09);
+  --linha-forte:    rgba(43, 33, 64, 0.16);
+  --sucesso-fundo:  #E4F0EA;
+  --alerta-fundo:   #F8E7E0;
+  --dourado-fundo:  #F6EEDC;
+
+  /* Mapa (tons dessaturados para o pin violeta saltar) */
+  --mapa-solo:      #EDE8E1;
+  --mapa-rua:       #FDFCFA;
+  --mapa-via:       #FFFFFF;
+  --mapa-parque:    #DCE7DC;
+  --mapa-agua:      #D6E3EC;
+  --mapa-quadra:    #F5F1EB;
+
+  /* Raios — cantos bem arredondados (16–24px, arquivo 05) */
+  --r-p: 12px;
+  --r-m: 18px;
+  --r-g: 24px;
+  --r-xg: 32px;
+  --r-pilula: 999px;
+
+  /* Sombras suaves, em camadas */
+  --sombra-1: 0 1px 2px rgba(43, 33, 64, 0.05), 0 2px 8px rgba(43, 33, 64, 0.04);
+  --sombra-2: 0 2px 6px rgba(43, 33, 64, 0.06), 0 8px 24px rgba(43, 33, 64, 0.08);
+  --sombra-3: 0 4px 12px rgba(43, 33, 64, 0.08), 0 18px 48px rgba(43, 33, 64, 0.14);
+  --sombra-pin: 0 3px 8px rgba(43, 33, 64, 0.28);
+
+  /* Escala de texto — respeita o ajuste do sistema (Dynamic Type) */
+  --escala: 1;
+
+  /* Superfícies translúcidas (material flutuante) */
+  --vidro:        rgba(255, 255, 255, 0.72);
+  --vidro-borda:  rgba(255, 255, 255, 0.65);
+  --vidro-blur:   blur(24px) saturate(180%);
+
+  --altura-tab: 62px;
+}
+
+/* Fora da moldura: acompanha o tema de quem está olhando.
+   Dentro da moldura, a identidade da marca é clara por decisão — arquivo 05. */
+:root {
+  --palco:        #EFEAE3;
+  --palco-texto:  #4A4258;
+  --palco-linha:  rgba(43, 33, 64, 0.12);
+}
+/* Três estados, não dois: quem não escolheu tema não tem atributo nenhum no
+   <html>, e só o prefers-color-scheme separa claro de escuro. Quem escolheu
+   ganha data-theme, e a escolha tem de vencer o sistema nas DUAS direções. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --palco:       #17141F;
+    --palco-texto: #A79FBB;
+    --palco-linha: rgba(255, 255, 255, 0.10);
+  }
+}
+:root[data-theme="dark"] {
+  --palco:       #17141F;
+  --palco-texto: #A79FBB;
+  --palco-linha: rgba(255, 255, 255, 0.10);
+}
+
+/* ------------------------------------------------------------- 2. RESET LEVE */
+* { box-sizing: border-box; }
+
+/* O `[hidden]{display:none}` do navegador perde para qualquer classe que
+   defina display (foi assim que a folha "escondida" ficou visível). Uma linha
+   aqui resolve a categoria inteira do problema, não um caso. */
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--palco);
+  color: var(--texto);
+  font-family: "Nunito Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: calc(16px * var(--escala));
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button, input, textarea, select {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  margin: 0;
+}
+button { cursor: pointer; }
+h1, h2, h3, h4, p, ul, ol, figure { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; }
+
+/* Foco visível só para teclado (a área de toque não ganha anel) */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--violeta);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* --------------------------------------------------------- 3. TIPOGRAFIA */
+/* Tracking é específico do tamanho: títulos grandes fecham, texto pequeno abre. */
+.serif { font-family: "Fraunces", ui-serif, Georgia, "Times New Roman", serif; }
+
+.d1 { font-family: "Fraunces", ui-serif, Georgia, serif; font-size: 2.15rem; line-height: 1.08; letter-spacing: -0.022em; font-weight: 600; font-optical-sizing: auto; }
+.d2 { font-family: "Fraunces", ui-serif, Georgia, serif; font-size: 1.6rem;  line-height: 1.14; letter-spacing: -0.016em; font-weight: 600; font-optical-sizing: auto; }
+.d3 { font-family: "Fraunces", ui-serif, Georgia, serif; font-size: 1.24rem; line-height: 1.2;  letter-spacing: -0.010em; font-weight: 600; font-optical-sizing: auto; }
+
+.t1 { font-size: 1.06rem; line-height: 1.35; font-weight: 700; letter-spacing: -0.004em; }
+.t2 { font-size: 0.95rem; line-height: 1.4;  font-weight: 700; letter-spacing: 0; }
+.corpo  { font-size: 0.95rem;  line-height: 1.55; }
+.pequeno{ font-size: 0.84rem;  line-height: 1.45; letter-spacing: 0.004em; }
+.micro  { font-size: 0.735rem; line-height: 1.35; letter-spacing: 0.018em; font-weight: 700; text-transform: uppercase; }
+
+.dim  { color: var(--texto-2); }
+.dim2 { color: var(--texto-3); }
+.tab-num { font-variant-numeric: tabular-nums; }
+.equilibra { text-wrap: balance; }
+
+/* ---------------------------------------------------------- 4. O PALCO */
+.palco {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  gap: 22px;
+  padding: 24px;
+}
+.legenda-palco {
+  color: var(--palco-texto);
+  text-align: center;
+  max-width: 66ch;
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+.legenda-palco b { color: var(--palco-texto); }
+.legenda-palco kbd {
+  font: inherit; font-size: 0.94em; font-weight: 700;
+  border: 1px solid var(--palco-linha);
+  border-radius: 6px; padding: 1px 6px;
+}
+
+/* A moldura de celular */
+.moldura {
+  position: relative;
+  width: 392px;
+  height: 844px;
+  max-height: calc(100dvh - 156px);
+  border-radius: 46px;
+  padding: 11px;
+  background: linear-gradient(160deg, #3a3448, #191521 42%, #2c2738);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.09) inset,
+    0 30px 70px rgba(20, 14, 34, 0.34),
+    0 6px 18px rgba(20, 14, 34, 0.22);
+  flex: none;
+}
+
+/* Em celular de verdade o app ocupa a tela toda — nada de moldura dentro de moldura */
+@media (max-width: 520px), (max-height: 700px) {
+  .palco { padding: 0; gap: 0; place-items: stretch; }
+  .moldura { width: 100%; height: 100vh; height: 100dvh; max-height: none; border-radius: 0; padding: 0; box-shadow: none; }
+  .app { border-radius: 0; }
+  .legenda-palco { display: none; }
+}
+
+/* --------------------------------------------------------- 5. A TELA (app) */
+.app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 36px;
+  overflow: hidden;
+  background: var(--fundo);
+  isolation: isolate;
+  /* área segura: notch em cima, barra de gestos embaixo */
+  --topo: 44px;
+  --base: 22px;
+}
+/* `--st` / `--sb` são preenchidas pelo app Android com as medidas REAIS do
+   recorte; no navegador ficam indefinidas e o `env()` assume. Um valor só não
+   serve para os dois: o WebView nem sempre reporta `env()`, e o navegador não
+   tem quem lhe diga o tamanho da barra. */
+@media (max-width: 520px), (max-height: 700px) {
+  .app {
+    --topo: max(20px, var(--st, env(safe-area-inset-top)));
+    --base: max(14px, var(--sb, env(safe-area-inset-bottom)));
+  }
+}
+
+/* Barra de status simulada */
+.status {
+  position: absolute; inset: 0 0 auto 0; height: var(--topo);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 26px; z-index: 80; pointer-events: none;
+  font-size: 0.78rem; font-weight: 800; letter-spacing: 0.01em;
+  color: var(--texto);
+  mix-blend-mode: multiply;
+}
+.status--claro { color: #fff; mix-blend-mode: normal; }
+.status .sinais { display: flex; align-items: center; gap: 5px; }
+.status .bateria {
+  width: 22px; height: 11px; border: 1.4px solid currentColor; border-radius: 3px;
+  position: relative; opacity: 0.9;
+}
+.status .bateria::after { content: ""; position: absolute; inset: 1.6px; right: 5px; background: currentColor; border-radius: 1px; }
+.status .bateria::before { content: ""; position: absolute; right: -3.4px; top: 3px; width: 2px; height: 5px; background: currentColor; border-radius: 0 2px 2px 0; }
+
+/* Notch */
+.notch {
+  position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+  width: 116px; height: 30px; border-radius: 999px; background: #12101a; z-index: 90;
+}
+@media (max-width: 520px), (max-height: 700px) { .notch { display: none; } .status { display: none; } .app { --topo: max(12px, var(--st, env(safe-area-inset-top))); } }
+
+/* Faixa invisível na borda esquerda: é por onde se puxa a tela de volta.
+   Precisa de touch-action:none, senão o navegador rola em vez de deixar
+   o gesto acontecer. */
+.borda-voltar {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 26px; z-index: 70;
+  touch-action: none; background: transparent;
+}
+
+/* Barra de gestos */
+.barra-gesto {
+  position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%);
+  width: 126px; height: 4.5px; border-radius: 999px; background: rgba(43, 33, 64, 0.24); z-index: 95; pointer-events: none;
+}
+
+/* ----------------------------------------------------- 6. PILHA DE TELAS */
+.pilha { position: absolute; inset: 0; }
+.tela {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--fundo);
+  will-change: transform;
+  contain: layout paint;
+}
+.tela--raiz { background: transparent; }
+/* O container das abas PRECISA continuar a cadeia flex. Sem isto o `.rolar`
+   de dentro não recebe altura, não rola, e o conteúdo é simplesmente cortado
+   pelo overflow do app — Favoritas e Minha conta ficavam sem fim de página. */
+.raiz__conteudo {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+/* véu que escurece a tela de trás enquanto a de cima entra */
+.tela__veu {
+  position: absolute; inset: 0; background: #17111f; opacity: 0; pointer-events: none; z-index: 60;
+}
+/* borda esquerda ganha uma sombra conforme a tela desliza */
+.tela--empilhada { box-shadow: -14px 0 34px rgba(24, 17, 38, 0.16); }
+
+/* Rolagem interna */
+.rolar {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.rolar::-webkit-scrollbar { width: 0; height: 0; }
+
+/* --------------------------------------------------- 7. MATERIAIS (vidro) */
+.vidro {
+  background: var(--vidro);
+  -webkit-backdrop-filter: var(--vidro-blur);
+  backdrop-filter: var(--vidro-blur);
+}
+/* Superfície maior = material mais espesso (borrão maior, sombra mais funda) */
+.vidro--espesso {
+  background: rgba(255, 255, 255, 0.80);
+  -webkit-backdrop-filter: blur(34px) saturate(190%);
+  backdrop-filter: blur(34px) saturate(190%);
+}
+/* aresta clara no topo: a luz batendo no material */
+.aresta-topo { border-top: 1px solid var(--vidro-borda); }
+
+/* Cabeçalho flutuante com desvanecimento na borda, no lugar de um filete de 1px */
+.cabecalho {
+  position: relative; z-index: 40; flex: none;
+  padding: calc(var(--topo) + 6px) 18px 12px;
+}
+.cabecalho--vidro { background: var(--vidro); -webkit-backdrop-filter: var(--vidro-blur); backdrop-filter: var(--vidro-blur); }
+.cabecalho--vidro::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -22px; height: 22px;
+  background: linear-gradient(to bottom, rgba(251, 248, 244, 0.85), rgba(251, 248, 244, 0));
+  pointer-events: none;
+}
+.cabecalho__linha { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.cabecalho__titulo { flex: 1 1 auto; min-width: 0; }
+
+/* --------------------------------------------------------- 8. BOTÕES */
+/* A resposta acontece no toque (pointerdown), não na soltura. */
+.btn {
+  --btn-bg: var(--violeta);
+  --btn-fg: #fff;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--r-m);
+  background: var(--btn-bg); color: var(--btn-fg);
+  font-weight: 800; font-size: 1rem; letter-spacing: -0.002em;
+  transform: scale(1);
+  transition: transform 120ms cubic-bezier(.22,.61,.36,1), opacity 120ms linear, background-color 140ms linear;
+  user-select: none; -webkit-user-select: none;
+  text-align: center;
+}
+.btn:disabled { opacity: 0.42; }
+.btn.pressionado:not(:disabled) { transform: scale(0.965); }
+.btn--bloco { display: flex; width: 100%; }
+.btn--secundario { --btn-bg: var(--violeta-fundo); --btn-fg: var(--violeta-escuro); }
+.btn--contorno { --btn-bg: transparent; --btn-fg: var(--texto); box-shadow: inset 0 0 0 1.5px var(--linha-forte); }
+.btn--fantasma { --btn-bg: transparent; --btn-fg: var(--violeta); min-height: 44px; }
+.btn--zap { --btn-bg: #1FA855; --btn-fg: #fff; }
+.btn--perigo { --btn-bg: transparent; --btn-fg: var(--alerta); box-shadow: inset 0 0 0 1.5px rgba(196, 106, 74, 0.4); }
+.btn--pequeno { min-height: 40px; padding: 0 15px; font-size: 0.88rem; border-radius: var(--r-p); }
+
+/* Botão redondo (voltar, fechar, alternar) — área de toque ≥ 44px */
+.redondo {
+  width: 44px; height: 44px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--superficie); color: var(--texto);
+  box-shadow: var(--sombra-1);
+  transition: transform 120ms cubic-bezier(.22,.61,.36,1), background-color 140ms linear;
+}
+.redondo.pressionado { transform: scale(0.9); }
+.redondo--vidro { background: var(--vidro); -webkit-backdrop-filter: var(--vidro-blur); backdrop-filter: var(--vidro-blur); }
+.redondo--nu { background: transparent; box-shadow: none; }
+
+/* --------------------------------------------------------- 9. CHIPS */
+.chips {
+  display: flex; gap: 8px; overflow-x: auto; padding: 2px 18px 2px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 18px;
+}
+.chips::-webkit-scrollbar { width: 0; height: 0; }
+.chip {
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 15px;
+  border-radius: var(--r-pilula);
+  background: var(--superficie); color: var(--texto);
+  box-shadow: var(--sombra-1);
+  font-size: 0.87rem; font-weight: 700; white-space: nowrap;
+  transition: transform 120ms cubic-bezier(.22,.61,.36,1), background-color 160ms linear, color 160ms linear;
+}
+.chip.pressionado { transform: scale(0.94); }
+.chip[aria-pressed="true"] { background: var(--violeta); color: #fff; box-shadow: 0 3px 10px rgba(91, 62, 142, 0.3); }
+.chip__conta {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  background: var(--violeta); color: #fff; font-size: 0.68rem; font-weight: 800;
+  display: grid; place-items: center;
+}
+.chip[aria-pressed="true"] .chip__conta { background: rgba(255, 255, 255, 0.28); }
+
+/* Etiqueta estática (terapias no perfil) */
+.etiqueta {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px; border-radius: var(--r-pilula);
+  background: var(--violeta-fundo); color: var(--violeta-escuro);
+  font-size: 0.79rem; font-weight: 800; white-space: nowrap;
+}
+.etiqueta--aberta { background: var(--sucesso-fundo); color: #37624E; }
+.etiqueta--fechada { background: var(--alerta-fundo); color: #9A4C31; }
+.etiqueta--verificada { background: var(--dourado-fundo); color: #7C6221; }
+.etiqueta--online { background: #E2ECF4; color: #38566B; }
+
+/* ------------------------------------------------------ 10. CARTÕES */
+.cartao {
+  background: var(--superficie);
+  border-radius: var(--r-g);
+  box-shadow: var(--sombra-1);
+  padding: 16px;
+}
+.cartao--plano { box-shadow: none; border: 1px solid var(--linha); }
+.secao { padding: 18px; }
+.secao__titulo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+.divisor { height: 1px; background: var(--linha); margin: 4px 18px; }
+.empilhado { display: flex; flex-direction: column; }
+.linha { display: flex; align-items: center; gap: 12px; }
+.entre { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* Avatar */
+.avatar {
+  border-radius: 50%; overflow: hidden; flex: none;
+  background: var(--violeta-fundo);
+  display: grid; place-items: center;
+  position: relative;
+}
+.avatar svg { width: 100%; height: 100%; }
+
+/* Estrelas */
+.estrelas { display: inline-flex; align-items: center; gap: 1.5px; color: var(--dourado); }
+.estrelas svg { width: 15px; height: 15px; }
+.estrelas--g svg { width: 21px; height: 21px; }
+
+/* --------------------------------------------------- 11. CAMPOS DE TEXTO */
+.campo { display: block; margin-bottom: 15px; }
+.campo__rot { display: block; font-size: 0.82rem; font-weight: 800; color: var(--texto-2); margin-bottom: 6px; letter-spacing: 0.01em; }
+.campo__cx {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 52px; padding: 0 15px;
+  background: var(--superficie); border-radius: var(--r-m);
+  box-shadow: inset 0 0 0 1.5px var(--linha);
+  transition: box-shadow 160ms ease;
+}
+.campo__cx:focus-within { box-shadow: inset 0 0 0 2px var(--violeta); }
+.campo__cx input, .campo__cx textarea {
+  flex: 1 1 auto; min-width: 0; width: 100%;
+  /* 16px evita o zoom automático do iOS ao focar */
+  font-size: max(16px, 0.98rem);
+  padding: 14px 0;
+  resize: none;
+}
+.campo__cx textarea { line-height: 1.5; }
+.campo__cx input::placeholder, .campo__cx textarea::placeholder { color: var(--texto-3); }
+.campo__ajuda { font-size: 0.78rem; color: var(--texto-2); margin-top: 6px; }
+.campo__erro { font-size: 0.78rem; color: var(--alerta); margin-top: 6px; font-weight: 700; }
+.campo--erro .campo__cx { box-shadow: inset 0 0 0 2px var(--alerta); }
+
+/* Chave liga/desliga */
+.chave {
+  width: 51px; height: 31px; border-radius: 999px; flex: none;
+  background: var(--linha-forte); position: relative;
+  transition: background-color 220ms cubic-bezier(.22,.61,.36,1);
+}
+.chave::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px;
+  border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: transform 260ms cubic-bezier(.3,1.3,.5,1);
+}
+.chave[aria-checked="true"] { background: var(--sucesso); }
+.chave[aria-checked="true"]::after { transform: translateX(20px); }
+
+/* -------------------------------------------------------- 12. O MAPA */
+.mapa {
+  position: absolute; inset: 0;
+  overflow: hidden;
+  background: var(--mapa-solo);
+  touch-action: none;
+  cursor: grab;
+}
+.mapa.arrastando { cursor: grabbing; }
+.mapa__mundo {
+  position: absolute; top: 0; left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.mapa__svg { position: absolute; top: 0; left: 0; }
+
+/* Pin — o tamanho não muda com o zoom (contra-escala pela var --z) */
+.pin {
+  position: absolute;
+  width: 46px; height: 56px;
+  margin: -56px 0 0 -23px;   /* ponta do pin no ponto exato */
+  transform: scale(calc(1 / var(--z, 1)));
+  transform-origin: 50% 100%;
+  will-change: transform;
+  filter: drop-shadow(0 3px 6px rgba(43, 33, 64, 0.3));
+}
+.pin__corpo { transition: transform 260ms cubic-bezier(.3,1.25,.5,1); transform-origin: 50% 100%; }
+.pin[data-sel="1"] { z-index: 5; }
+.pin[data-sel="1"] .pin__corpo { transform: scale(1.22); }
+.pin__anel {
+  position: absolute; left: 50%; bottom: -6px; width: 20px; height: 8px;
+  margin-left: -10px; border-radius: 50%;
+  background: rgba(91, 62, 142, 0.28);
+  opacity: 0; transform: scale(0.6);
+}
+.pin[data-sel="1"] .pin__anel { animation: pulso 1.9s ease-out infinite; }
+@keyframes pulso {
+  0%   { opacity: 0.55; transform: scale(0.6); }
+  70%  { opacity: 0;    transform: scale(2.6); }
+  100% { opacity: 0;    transform: scale(2.6); }
+}
+.pin__nota {
+  position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+  font-size: 0.66rem; font-weight: 900; color: #fff; letter-spacing: -0.01em;
+}
+/* Fechada não vira cinza: o mapa perderia a leitura de "onde tem terapeuta".
+   Perde saturação e presença, sem sair da paleta. */
+.pin--fechada { opacity: 0.62; filter: saturate(0.45) drop-shadow(0 2px 4px rgba(43, 33, 64, 0.22)); }
+
+/* O ponto azul de "você está aqui" */
+.eu { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; transform: scale(calc(1 / var(--z, 1))); }
+.eu__nucleo { position: absolute; inset: 4px; border-radius: 50%; background: #2C7BE5; box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,0.25); }
+.eu__halo { position: absolute; inset: -14px; border-radius: 50%; background: rgba(44, 123, 229, 0.16); animation: respira 3.4s ease-in-out infinite; }
+@keyframes respira { 0%,100% { transform: scale(0.85); opacity: 0.75; } 50% { transform: scale(1.15); opacity: 0.35; } }
+
+/* Rótulo de bairro no mapa */
+.mapa__rotulo {
+  position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--z, 1)));
+  font-size: 0.63rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #A79FB4; pointer-events: none; white-space: nowrap;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 1px 2px rgba(255,255,255,0.95);
+}
+
+/* Controles flutuantes sobre o mapa */
+.mapa__topo { position: absolute; top: 0; left: 0; right: 0; z-index: 30; padding-top: calc(var(--topo) + 4px); pointer-events: none; }
+.mapa__topo > * { pointer-events: auto; }
+.busca {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 16px 10px; padding: 0 14px; height: 50px;
+  border-radius: var(--r-m);
+  background: var(--vidro); -webkit-backdrop-filter: var(--vidro-blur); backdrop-filter: var(--vidro-blur);
+  box-shadow: var(--sombra-2);
+  border: 1px solid var(--vidro-borda);
+}
+.busca input { flex: 1 1 auto; min-width: 0; font-size: max(16px, 0.95rem); font-weight: 600; }
+.flutuantes {
+  position: absolute; right: 16px; z-index: 30;
+  display: flex; flex-direction: column; gap: 10px;
+  will-change: transform;
+}
+/* Sem este recuo os botões ficam ATRÁS da barra de abas e não dá para tocá-los */
+.flutuantes--dir { bottom: calc(var(--altura-tab) + var(--base) + 14px); }
+
+/* ------------------------------------------------- 13. FOLHA (bottom sheet) */
+.folha {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 50;
+  max-height: calc(100% - var(--topo) - 24px);
+  border-radius: var(--r-xg) var(--r-xg) 0 0;
+  background: var(--superficie);
+  box-shadow: 0 -2px 10px rgba(43, 33, 64, 0.07), 0 -16px 46px rgba(43, 33, 64, 0.16);
+  will-change: transform;
+  touch-action: none;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.folha__alca { flex: none; padding: 9px 0 4px; display: grid; place-items: center; }
+.folha__alca i { display: block; width: 38px; height: 5px; border-radius: 999px; background: var(--linha-forte); }
+/* Conteúdo comprido (a lista de filtros) rola por dentro em vez de a folha
+   crescer para fora da tela. `pan-y` deixa a rolagem nativa acontecer sem
+   atrapalhar o arraste da folha, que é tratado no JS. */
+.folha__conteudo {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.folha__conteudo::-webkit-scrollbar { width: 0; height: 0; }
+/* A ação principal da folha fica sempre ao alcance, mesmo com a lista rolada */
+.folha__rodape {
+  position: sticky; bottom: 0;
+  padding: 10px 0 2px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), var(--superficie) 22%);
+}
+
+/* ---------------------------------------------------- 14. BARRA DE ABAS */
+.abas {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 55;
+  height: calc(var(--altura-tab) + var(--base));
+  padding-bottom: var(--base);
+  display: flex; align-items: stretch;
+  background: var(--vidro); -webkit-backdrop-filter: var(--vidro-blur); backdrop-filter: var(--vidro-blur);
+  border-top: 1px solid var(--vidro-borda);
+}
+.aba {
+  flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  color: var(--texto-2); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.01em;
+  transition: color 180ms ease;
+  position: relative;
+}
+.aba svg { width: 24px; height: 24px; transition: transform 240ms cubic-bezier(.3,1.3,.5,1); }
+.aba.pressionado svg { transform: scale(0.86); }
+.aba[aria-selected="true"] { color: var(--violeta); }
+.aba__conta {
+  position: absolute; top: 4px; left: calc(50% + 6px);
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+  background: var(--alerta); color: #fff; font-size: 0.62rem; font-weight: 900;
+  display: grid; place-items: center;
+}
+
+/* ------------------------------------------------------- 15. AVALIAÇÕES */
+.barra-nota { height: 6px; border-radius: 999px; background: var(--linha); overflow: hidden; flex: 1 1 auto; }
+.barra-nota i { display: block; height: 100%; background: var(--dourado); border-radius: 999px; }
+.avaliacao { padding: 14px 0; border-bottom: 1px solid var(--linha); }
+.avaliacao:last-child { border-bottom: 0; }
+.resposta {
+  margin-top: 10px; padding: 11px 13px;
+  background: var(--violeta-08); border-radius: var(--r-p);
+  border-left: 3px solid var(--violeta-claro);
+}
+
+/* Seletor de estrelas (avaliar) */
+.seletor-estrelas { display: flex; justify-content: center; gap: 6px; }
+.seletor-estrelas button { width: 52px; height: 52px; display: grid; place-items: center; color: var(--linha-forte); transition: transform 180ms cubic-bezier(.3,1.4,.5,1), color 160ms ease; }
+.seletor-estrelas button svg { width: 40px; height: 40px; }
+.seletor-estrelas button[data-on="1"] { color: var(--dourado); }
+.seletor-estrelas button.pressionado { transform: scale(1.18); }
+
+/* ------------------------------------------------------ 16. PASSOS (wizard) */
+.progresso { display: flex; gap: 5px; padding: 0 18px 4px; }
+.progresso i { flex: 1 1 0; height: 4px; border-radius: 999px; background: var(--linha); overflow: hidden; }
+.progresso i[data-on="1"] { background: var(--violeta); }
+.rodape-fixo {
+  flex: none; padding: 12px 18px calc(12px + var(--base));
+  background: var(--vidro); -webkit-backdrop-filter: var(--vidro-blur); backdrop-filter: var(--vidro-blur);
+  border-top: 1px solid var(--vidro-borda);
+  display: flex; gap: 10px; align-items: center;
+  position: relative; z-index: 20;
+}
+
+/* Seleção múltipla em grade */
+.grade-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.opcao {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 14px; border-radius: var(--r-m);
+  background: var(--superficie); box-shadow: inset 0 0 0 1.5px var(--linha);
+  font-weight: 700; font-size: 0.9rem;
+  transition: box-shadow 160ms ease, background-color 160ms ease, transform 120ms cubic-bezier(.22,.61,.36,1);
+}
+.opcao.pressionado { transform: scale(0.975); }
+.opcao[aria-pressed="true"] { background: var(--violeta-fundo); box-shadow: inset 0 0 0 2px var(--violeta); color: var(--violeta-escuro); }
+.opcao__marca {
+  width: 22px; height: 22px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  box-shadow: inset 0 0 0 1.5px var(--linha-forte); color: transparent;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.opcao[aria-pressed="true"] .opcao__marca { background: var(--violeta); color: #fff; box-shadow: none; }
+
+/* Cartão grande de escolha (papel) */
+.cartao-escolha {
+  display: block; width: 100%; text-align: left;
+  padding: 20px; border-radius: var(--r-g);
+  background: var(--superficie); box-shadow: var(--sombra-1);
+  transition: transform 140ms cubic-bezier(.22,.61,.36,1), box-shadow 200ms ease;
+}
+.cartao-escolha.pressionado { transform: scale(0.975); }
+.cartao-escolha[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--violeta), var(--sombra-2); }
+
+/* ------------------------------------------------------- 17. ESTADOS */
+.vazio { padding: 40px 26px; text-align: center; }
+.vazio svg { margin: 0 auto 14px; opacity: 0.55; }
+.esqueleto {
+  background: linear-gradient(100deg, var(--linha) 30%, rgba(43,33,64,0.03) 50%, var(--linha) 70%);
+  background-size: 220% 100%; animation: brilho 1.5s linear infinite; border-radius: 8px;
+}
+@keyframes brilho { to { background-position: -220% 0; } }
+
+/* Aviso flutuante (torrada) */
+.torrada {
+  position: absolute; left: 16px; right: 16px; bottom: calc(var(--base) + 78px); z-index: 120;
+  padding: 13px 16px; border-radius: var(--r-m);
+  background: rgba(35, 26, 53, 0.93); color: #fff;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: var(--sombra-3);
+  font-size: 0.88rem; font-weight: 700; line-height: 1.4;
+  display: flex; align-items: center; gap: 10px;
+  will-change: transform, opacity;
+}
+
+/* Diálogo modal */
+.cortina { position: absolute; inset: 0; z-index: 130; background: rgba(23, 17, 31, 0.42); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); display: grid; place-items: center; padding: 26px; }
+.dialogo { width: 100%; max-width: 320px; background: var(--superficie); border-radius: var(--r-g); padding: 22px; box-shadow: var(--sombra-3); text-align: center; will-change: transform, opacity; }
+
+/* Entrada: bloco central + texto legal ancorado embaixo, em vez de tudo
+   empilhado no topo com um vazio de meia tela. */
+.entrada { display: flex; flex-direction: column; height: 100%; padding: 0 22px; }
+.entrada__meio { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; text-align: center; padding-top: var(--topo); }
+.entrada__rodape { flex: none; padding-bottom: calc(var(--base) + 14px); }
+
+/* -------------------------------------------------------- 18. SPLASH */
+.splash {
+  position: absolute; inset: 0; z-index: 150;
+  display: grid; place-items: center;
+  background: linear-gradient(168deg, #6A4A9E 0%, #4A2F7B 52%, #35205C 100%);
+  color: #fff;
+  overflow: hidden;
+}
+.splash__aura { position: absolute; width: 150%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(232,223,246,0.30) 0%, rgba(232,223,246,0) 62%); }
+.splash__conteudo { position: relative; text-align: center; padding: 0 34px; }
+.splash h1 { color: #fff; margin-bottom: 10px; }
+.splash p { color: rgba(255,255,255,0.82); }
+
+.lotus { margin: 0 auto 22px; width: max-content; }
+.lotus svg { margin: 0 auto; }
+
+/* --------------------------------------------- 19. PREFERÊNCIAS DO SISTEMA */
+
+/* Movimento reduzido: troca deslize/mola por dissolução curta. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 120ms !important;
+  }
+  .pin__anel, .eu__halo { animation: none !important; }
+}
+
+/* Transparência reduzida: o vidro vira superfície opaca. */
+@media (prefers-reduced-transparency: reduce) {
+  .vidro, .vidro--espesso, .busca, .abas, .redondo--vidro, .cabecalho--vidro, .rodape-fixo, .torrada {
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+    background: var(--superficie) !important;
+  }
+  .torrada { background: #231A35 !important; }
+  .cortina { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+
+/* Mais contraste: fundo quase sólido e borda definida. */
+@media (prefers-contrast: more) {
+  :root { --texto-2: #5C5474; --texto-3: #6E6688; --linha: rgba(43,33,64,0.22); --linha-forte: rgba(43,33,64,0.4); }
+  .cartao, .chip, .redondo { box-shadow: 0 0 0 1px var(--linha-forte); }
+  .busca, .abas { background: #fff !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+
+/* Utilidades */
+.esconde { display: none !important; }
+.so-leitor { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.pl { padding-left: 18px; } .pr { padding-right: 18px; }
+.mt4 { margin-top: 4px; } .mt8 { margin-top: 8px; } .mt12 { margin-top: 12px; } .mt16 { margin-top: 16px; } .mt24 { margin-top: 24px; }
+.mb8 { margin-bottom: 8px; } .mb12 { margin-bottom: 12px; } .mb16 { margin-bottom: 16px; } .mb24 { margin-bottom: 24px; }
+.cresce { flex: 1 1 auto; min-width: 0; }
+.centro { text-align: center; }
+.gap6 { gap: 6px; } .gap10 { gap: 10px; }
+.enrola { display: flex; flex-wrap: wrap; gap: 6px; }

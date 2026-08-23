@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- windowBackground na cor da abertura: sem isto o Android pisca um
+         retangulo branco antes do primeiro quadro da pagina. -->
+    <style name="TemaMapaHolistico" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/abertura</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+</resources>

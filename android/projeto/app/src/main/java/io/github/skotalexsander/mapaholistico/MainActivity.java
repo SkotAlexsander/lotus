@@ -1,0 +1,299 @@
+package io.github.skotalexsander.mapaholistico;
+
+import android.annotation.SuppressLint;
+import android.content.Intent;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowInsets;
+import android.view.WindowManager;
+import android.webkit.ConsoleMessage;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import androidx.webkit.WebViewAssetLoader;
+
+/**
+ * Mapa Holístico — o protótipo dentro de uma janela nativa.
+ *
+ * O app inteiro é UM arquivo HTML dentro do pacote. Não há servidor, não há
+ * requisição para a internet: as fontes estão embutidas e o mapa é desenhado
+ * por código.
+ *
+ * Os arquivos são servidos por WebViewAssetLoader em
+ * https://appassets.androidplatform.net/assets/ — não é a internet, é um
+ * atalho que o próprio WebView intercepta antes de sair para a rede.
+ *
+ * Usar https (e não file://) importa: sem ORIGEM SEGURA o Android trata o
+ * armazenamento como descartável e bloqueia parte das APIs modernas. Com
+ * file:// o app abriria e defeitos apareceriam só no aparelho de alguém.
+ */
+public class MainActivity extends android.app.Activity {
+
+    private static final String INICIO =
+            "https://appassets.androidplatform.net/assets/index.html";
+
+    /** O mesmo violeta da tela de abertura. Divergir aqui pisca outra cor
+     *  entre a abertura do app e o primeiro quadro da página. */
+    private static final int ABERTURA = 0xFF4A2F7B;
+
+    private WebView web;
+
+    @SuppressLint("SetJavaScriptEnabled")
+    @Override
+    protected void onCreate(Bundle estadoSalvo) {
+        super.onCreate(estadoSalvo);
+
+        prepararJanela();
+
+        web = new WebView(this);
+        web.setBackgroundColor(ABERTURA);
+        web.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        setContentView(web);
+
+        WebSettings cfg = web.getSettings();
+        cfg.setJavaScriptEnabled(true);
+        cfg.setDomStorageEnabled(true);
+        cfg.setSupportZoom(false);
+        cfg.setBuiltInZoomControls(false);
+        cfg.setDisplayZoomControls(false);
+        // Ignora a fonte gigante do sistema: o protótipo tem layout de tela de
+        // celular e escala de texto do sistema quebraria o que se quer avaliar.
+        cfg.setTextZoom(100);
+        if (Build.VERSION.SDK_INT >= 26) web.setDefaultFocusHighlightEnabled(false);
+
+        final WebViewAssetLoader carregador = new WebViewAssetLoader.Builder()
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .build();
+
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest pedido) {
+                return carregador.shouldInterceptRequest(pedido.getUrl());
+            }
+
+            /** Nada que não seja o próprio app abre DENTRO da janela. Link de
+             *  fora vai para o aplicativo certo do celular (WhatsApp, navegador). */
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest pedido) {
+                Uri u = pedido.getUrl();
+                if (u != null && "appassets.androidplatform.net".equals(u.getHost())) return false;
+                abrirFora(u);
+                return true;
+            }
+
+            @Override
+            public void onPageFinished(WebView v, String url) {
+                aplicarAreaSegura();
+            }
+        });
+
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage m) {
+                // Erro de JavaScript no aparelho some sem isto. Ver com:
+                //   adb logcat -s MapaHolistico
+                Log.d("MapaHolistico", m.message() + "  (" + m.sourceId() + ":" + m.lineNumber() + ")");
+                return true;
+            }
+        });
+
+        /* A ponte existe por UM motivo: `window.open` num WebView não abre nada
+         * por padrão, e o botão "Chamar no WhatsApp" é a ação principal do app.
+         * A superfície é mínima e a página é a nossa, empacotada aqui dentro —
+         * não há conteúdo de terceiro rodando neste WebView. */
+        web.addJavascriptInterface(new Ponte(), "PonteAndroid");
+
+        // Depois do setContentView, NUNCA antes: sem DecorView criada,
+        // getInsetsController() devolve null por dentro e o app morre na
+        // abertura. Foi exatamente esse o crash medido no aparelho.
+        //
+        // O app e claro em quase toda tela. Sem isto o relogio e os icones do
+        // sistema saem BRANCOS sobre o fundo creme e viram um borrao — defeito
+        // que nao existe no navegador e so aparece com o app em tela cheia.
+        // O padrao e "fundo claro"; a pagina avisa quando esta na abertura
+        // violeta. Se o aviso falhar, o pior caso sao 1,5 s de icone escuro
+        // sobre violeta — e nao a barra ilegivel a sessao inteira.
+        fundoClaro(true);
+
+        registrarVoltar();
+        web.loadUrl(INICIO);
+    }
+
+    /** Desenha até as bordas, para a página receber o tamanho real do recorte. */
+    private void prepararJanela() {
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+
+        if (Build.VERSION.SDK_INT >= 28) {
+            getWindow().getAttributes().layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        }
+        if (Build.VERSION.SDK_INT >= 30) {
+            getWindow().setDecorFitsSystemWindows(false);
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+        }
+
+    }
+
+    /** true = a area sob a barra de status esta clara, entao icone escuro. */
+    private void fundoClaro(boolean claro) {
+      try {
+        if (Build.VERSION.SDK_INT >= 30) {
+            android.view.WindowInsetsController c = getWindow().getInsetsController();
+            if (c == null) return;
+            int mascara = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                    | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+            c.setSystemBarsAppearance(claro ? mascara : 0, mascara);
+        } else if (Build.VERSION.SDK_INT >= 26) {
+            int base = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+            int claros = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            getWindow().getDecorView().setSystemUiVisibility(claro ? (base | claros) : base);
+        }
+      } catch (Exception e) {
+        // Barra com a cor errada e feio; app que nao abre e pior.
+        Log.d("MapaHolistico", "nao deu para ajustar a barra de status: " + e.getMessage());
+      }
+    }
+
+    /**
+     * Diz à página onde ficam a barra de status e a barra de gestos.
+     *
+     * Por que não deixar o CSS resolver: `env(safe-area-inset-*)` só responde
+     * em parte dos WebViews, e quando não responde volta ZERO — o cabeçalho
+     * fica embaixo do relógio do celular e ninguém percebe no emulador. Quem
+     * sabe a medida certa é o Android; a página lê de `--st` / `--sb` e só cai
+     * no `env()` quando ninguém lhe disse nada (o caso do navegador).
+     */
+    private void aplicarAreaSegura() {
+        if (Build.VERSION.SDK_INT < 28) return;
+        web.post(new Runnable() {
+            @Override
+            public void run() {
+                WindowInsets insets = web.getRootWindowInsets();
+                if (insets == null) return;
+
+                int topo, base;
+                if (Build.VERSION.SDK_INT >= 30) {
+                    android.graphics.Insets barras = insets.getInsets(
+                            WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                    topo = barras.top;
+                    base = barras.bottom;
+                } else {
+                    topo = insets.getSystemWindowInsetTop();
+                    base = insets.getSystemWindowInsetBottom();
+                }
+
+                float d = getResources().getDisplayMetrics().density;
+                int topoCss = Math.round(topo / d);
+                int baseCss = Math.round(base / d);
+
+                String js = "document.documentElement.style.setProperty('--st','" + topoCss + "px');"
+                        + "document.documentElement.style.setProperty('--sb','" + baseCss + "px');";
+                web.evaluateJavascript(js, null);
+            }
+        });
+    }
+
+    private void abrirFora(Uri destino) {
+        if (destino == null) return;
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, destino);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            Log.d("MapaHolistico", "nada no celular abre " + destino + ": " + e.getMessage());
+        }
+    }
+
+    /** A ponte que a página chama. Duas funções, e nenhuma devolve dados. */
+    private class Ponte {
+        @JavascriptInterface
+        public void abrirFora(String url) {
+            if (url == null) return;
+            final Uri u = Uri.parse(url);
+            runOnUiThread(new Runnable() {
+                @Override public void run() { MainActivity.this.abrirFora(u); }
+            });
+        }
+
+        /** A página avisa quando o fundo sob a barra de status muda de claridade. */
+        @JavascriptInterface
+        public void fundoClaro(final boolean claro) {
+            runOnUiThread(new Runnable() {
+                @Override public void run() { MainActivity.this.fundoClaro(claro); }
+            });
+        }
+    }
+
+    /**
+     * O botão VOLTAR do Android é o mesmo gesto de puxar da borda: pergunta à
+     * página se ela tem para onde voltar. Só sai do app quando ela não tem —
+     * fechar o app no meio de um fluxo é a maior irritação de WebView mal feito.
+     *
+     * ⚠️ `onBackPressed()` SOZINHO NAO BASTA. Com targetSdk 35+ em Android 15 ou
+     * mais novo, o gesto preditivo de voltar passa a ser o padrao e o sistema
+     * NAO chama mais `onBackPressed()` — ele encerra a Activity direto. Foi
+     * medido: com so o override, tocar em voltar com a folha aberta FECHAVA O
+     * APP. Por isso o dispatcher novo e registrado quando existe, e o override
+     * antigo fica para os aparelhos anteriores.
+     */
+    private void registrarVoltar() {
+        if (Build.VERSION.SDK_INT < 33) { Log.d("MapaHolistico", "voltar: SDK antigo, usando onBackPressed"); return; }
+        getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                new android.window.OnBackInvokedCallback() {
+                    @Override public void onBackInvoked() {
+                        Log.d("MapaHolistico", "voltar: dispatcher novo chamou");
+                        tratarVoltar();
+                    }
+                });
+        Log.d("MapaHolistico", "voltar: dispatcher novo registrado");
+    }
+
+    private void tratarVoltar() {
+        if (web == null) { finish(); return; }
+        web.evaluateJavascript(
+                // `App` e declarado com `const` no topo do script. `const` NAO vira
+                // propriedade de `window` (so `var` e funcao viram), entao
+                // `window.App` e undefined e a pergunta voltava sempre "nao" —
+                // e o botao voltar fechava o app no meio do fluxo. Referencia
+                // direta resolve pelo escopo do script, que e onde ele vive.
+                "(function(){ try { if (typeof App !== 'undefined' && App.voltarSePuder && App.voltarSePuder()) return 'sim'; } catch(e){ return 'ERRO ' + e.message; } return 'nao'; })()",
+                new android.webkit.ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(String r) {
+                        Log.d("MapaHolistico", "voltar: a pagina respondeu " + r);
+                        if (r == null || !r.contains("sim")) finish();
+                    }
+                });
+    }
+
+    @Override
+    public void onBackPressed() {
+        Log.d("MapaHolistico", "voltar: onBackPressed antigo chamou");
+        tratarVoltar();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (web != null) {
+            ((ViewGroup) web.getParent()).removeView(web);
+            web.destroy();
+            web = null;
+        }
+        super.onDestroy();
+    }
+}

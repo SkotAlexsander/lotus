@@ -1,0 +1,16 @@
+# Obra do Gradle — regerada por `python android/montar_apk.py`
+android/projeto/build/
+android/projeto/app/build/
+android/projeto/.gradle/
+local.properties
+
+# O HTML dentro do APK é cópia do index.html, posta ali pelo montar_apk.py
+android/projeto/app/src/main/assets/
+
+# Resultado de execução das bancadas
+teste/fotos/
+teste/fotos-aparelho/
+
+node_modules/
+Thumbs.db
+.DS_Store

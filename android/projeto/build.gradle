@@ -1,0 +1,9 @@
+// Versao do plugin fixada de proposito: o AGP e o Gradle andam em par, e
+// "usar a mais nova" quebra sem aviso quando um dos dois anda sozinho.
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.9.1' }
+}
+allprojects {
+    repositories { google(); mavenCentral() }
+}
