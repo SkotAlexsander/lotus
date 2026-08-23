@@ -19,21 +19,24 @@ const Mapa = (() => {
     };
   }
 
-  const BAIRROS = [
-    { nome: 'Centro Histórico', x: 1600, y: 2270 },
-    { nome: 'Bom Fim', x: 1640, y: 2080 },
-    { nome: 'Moinhos de Vento', x: 1735, y: 1985 },
-    { nome: 'Petrópolis', x: 1900, y: 2075 },
-    { nome: 'Menino Deus', x: 1710, y: 2470 },
-    { nome: 'Higienópolis', x: 1700, y: 1830 },
-    { nome: 'Tristeza', x: 1520, y: 3000 },
-    { nome: 'Sarandi', x: 1560, y: 900 },
-    { nome: 'Canoas', x: 2180, y: 680 },
-    { nome: 'Cachoeirinha', x: 1700, y: 180 },
-    { nome: 'Gravataí', x: 2600, y: 400 },
-    { nome: 'Alvorada', x: 2420, y: 1290 },
-    { nome: 'Viamão', x: 2950, y: 1980 },
-  ];
+  /* Os rótulos de bairro do mapa desenhado saem dos PRÓPRIOS DADOS.
+
+     Antes eram uma lista à parte, com coordenadas cravadas no plano. Quando as
+     terapeutas ganharam coordenada real, a lista ficou apontando para o lugar
+     errado — e como é só decoração, ninguém teria percebido. Derivar da fonte
+     única resolve isso de uma vez: mudou a terapeuta de bairro, o rótulo segue. */
+  function bairrosDoMapa() {
+    const vistos = new Map();
+    const por = (nome, lat, lng) => { if (nome && !vistos.has(nome)) vistos.set(nome, { nome, lat, lng }); };
+    por(Dados.EU.bairro, Dados.EU.lat, Dados.EU.lng);
+    Dados.TERAPEUTAS.forEach((t) => {
+      // Em cidade da região metropolitana o nome útil é o da CIDADE, não o do
+      // bairro: "Vila Betânia" não localiza ninguém; "Cachoeirinha", sim.
+      const nome = t.cidade === Dados.EU.cidade ? t.bairro : t.cidade;
+      por(nome, t.lat, t.lng);
+    });
+    return Array.from(vistos.values());
+  }
 
   /* ------------------------------------------------------ desenho do mapa */
   // `sufixo` existe porque a mesma malha aparece em vários lugares ao mesmo
@@ -126,9 +129,10 @@ const Mapa = (() => {
   }
 
   function rotulos() {
-    return BAIRROS.map((b) =>
-      `<span class="mapa__rotulo" style="left:${b.x}px;top:${b.y}px">${b.nome}</span>`
-    ).join('');
+    return bairrosDoMapa().map((b) => {
+      const p = Dados.paraPlano(b.lat, b.lng);
+      return `<span class="mapa__rotulo" style="left:${Math.round(p.x)}px;top:${Math.round(p.y) - 34}px">${b.nome}</span>`;
+    }).join('');
   }
 
   /* ------------------------------------------------------------ gestos */
@@ -136,6 +140,10 @@ const Mapa = (() => {
   // cuja graça é ver QUEM ESTÁ NA REGIÃO. Em z=0,45 a tela cobre ~7 km, que é
   // a distância que alguém aceita percorrer para uma sessão.
   const ZOOM_MIN = 0.28, ZOOM_MAX = 2.0, ZOOM_INICIAL = 0.45;
+
+  /* Níveis semânticos, os mesmos nomes do mapa real. O app fala em "região" e
+     "pessoa"; cada motor traduz para a sua escala — aqui 0,28–2,0, lá 0–22. */
+  const NIVEL = { regiao: 0.45, pessoa: 0.62 };
 
   function montar(el, op = {}) {
     const mundo = el.querySelector('.mapa__mundo');
@@ -173,8 +181,8 @@ const Mapa = (() => {
     /* Onde, na tela, está um ponto do mundo? Serve para o card apontar o pin. */
     function paraTela(x, y) { return { x: x * z + tx, y: y * z + ty }; }
 
-    /* Coloca um ponto do mundo no centro da área visível (descontando a folha) */
-    function centralizar(x, y, zAlvo = z, animado = true) {
+    /* Coloca um ponto do PLANO no centro da área visível (descontando a folha) */
+    function centralizarPlano(x, y, zAlvo = z, animado = true) {
       const { w, h } = tela();
       const zz = Fisica.limitar(zAlvo, ZOOM_MIN, ZOOM_MAX);
       const alvoX = w / 2 - x * zz;
@@ -188,6 +196,24 @@ const Mapa = (() => {
         return;
       }
       molaX.para(fx); molaY.para(fy); molaZ.para(zz);
+    }
+
+    /* A interface que o app usa é a MESMA do mapa real: coordenada de verdade e
+       nível com nome. Quem converte para o plano é este motor, aqui dentro. */
+    function centralizar(lat, lng, nivel = 'regiao', animado = true) {
+      const p = Dados.paraPlano(lat, lng);
+      centralizarPlano(p.x, p.y, Math.max(z, NIVEL[nivel] || NIVEL.regiao), animado);
+    }
+
+    /* Os pinos do mapa desenhado vivem dentro do mundo; refazer o bloco inteiro
+       é barato porque são 12 elementos, e mantém filtro e horário em dia. */
+    function atualizarPins() {
+      const caixa = el.querySelector('#pins');
+      if (caixa) caixa.innerHTML = Telas.pinsHTML();
+    }
+
+    function selecionar(id) {
+      el.querySelectorAll('.pin').forEach((p) => { p.dataset.sel = (p.dataset.id === id ? '1' : '0'); });
     }
 
     function definirOffsetBaixo(v) { offsetBaixo = v; }
@@ -374,8 +400,10 @@ const Mapa = (() => {
       ampliarNoPonto(el.getBoundingClientRect().left + w / 2, el.getBoundingClientRect().top + offsetTopo + (h - offsetTopo - offsetBaixo) / 2, fator);
     }
 
-    return { centralizar, paraTela, definirOffsetBaixo, definirOffsetTopo, ajustarZoom, pintar, get zoom() { return z; } };
+    return { motor: 'desenhado', centralizar, centralizarPlano, paraTela, atualizarPins, selecionar,
+             definirOffsetBaixo, definirOffsetTopo, ajustarZoom, pintar, destruir() {},
+             get zoom() { return z; } };
   }
 
-  return { gerarSVG, rotulos, montar, BAIRROS, ZOOM_INICIAL };
+  return { gerarSVG, rotulos, montar, bairrosDoMapa, ZOOM_INICIAL, NIVEL };
 })();

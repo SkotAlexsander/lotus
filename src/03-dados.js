@@ -8,8 +8,9 @@ const Dados = (() => {
 
   /* ---------------------------------------------------- mundo do mapa */
   // Plano cartesiano em pixels. 120 px = 1 km. O mundo inteiro tem ~28 km.
-  const MUNDO = { largura: 3400, altura: 3400, pxPorKm: 120 };
-  const EU = { x: 1700, y: 1900, bairro: 'Higienópolis', cidade: 'Porto Alegre', uf: 'RS' };
+  const MUNDO = { largura: 4400, altura: 4400, pxPorKm: 120 };
+  const EU = { x: 2000, y: 2100, lat: -30.01382, lng: -51.18227,
+               bairro: 'Higienópolis', cidade: 'Porto Alegre', uf: 'RS' };
 
   /* --------------------------------------------- catálogo de terapias */
   // No app real esta lista é uma tabela controlada pelo admin (arquivo 03),
@@ -32,7 +33,7 @@ const Dados = (() => {
       id: 't1', nome: 'Rosane Albuquerque', tom: 268,
       bairro: 'Centro Histórico', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua dos Andradas, 1200 — sala 43',
-      x: 1620, y: 2240, verificada: true, ativa: true,
+      lat: -30.0325, lng: -51.23033, verificada: true, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551999120043', instagram: 'rosane.apometria',
       terapias: ['Apometria', 'Limpeza Energética', 'Mesa Radiônica'],
@@ -55,7 +56,7 @@ const Dados = (() => {
       id: 't2', nome: 'Marina Corrêa', tom: 305,
       bairro: 'Bom Fim', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua Fernandes Vieira, 380 — casa 2',
-      x: 1655, y: 2065, verificada: false, ativa: true,
+      lat: -30.0334, lng: -51.21172, verificada: false, ativa: true,
       atendimento: ['presencial'],
       whatsapp: '5551998451207', instagram: 'marinacorrea.reiki',
       terapias: ['Reiki', 'Cromoterapia', 'Aromaterapia'],
@@ -78,7 +79,7 @@ const Dados = (() => {
       id: 't3', nome: 'Lúcia Fontoura', tom: 282,
       bairro: 'Vila Betânia', cidade: 'Cachoeirinha', uf: 'RS',
       endereco: 'Av. Flores da Cunha, 2400 — sala 12',
-      x: 1720, y: 220, verificada: true, ativa: true,
+      lat: -29.94934, lng: -51.08989, verificada: true, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551997330288', instagram: 'lucia.fontoura.apometria',
       terapias: ['Apometria', 'Mesa Radiônica', 'Limpeza Energética'],
@@ -100,7 +101,7 @@ const Dados = (() => {
       id: 't4', nome: 'Bianca Nunes', tom: 322,
       bairro: 'Moinhos de Vento', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua Padre Chagas, 90 — conjunto 704',
-      x: 1690, y: 2020, verificada: true, ativa: true,
+      lat: -30.02407, lng: -51.20542, verificada: true, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551991887744', instagram: 'biancanunes.theta',
       terapias: ['ThetaHealing', 'Barras de Access', 'Constelação Familiar'],
@@ -124,7 +125,7 @@ const Dados = (() => {
       id: 't5', nome: 'Denise Wachholz', tom: 258,
       bairro: 'Marechal Rondon', cidade: 'Canoas', uf: 'RS',
       endereco: 'Rua Ipiranga, 515',
-      x: 2160, y: 730, verificada: false, ativa: true,
+      lat: -29.92233, lng: -51.16301, verificada: false, ativa: true,
       atendimento: ['presencial'],
       whatsapp: '5551996204411', instagram: 'denise.constelacao',
       terapias: ['Constelação Familiar', 'Apometria'],
@@ -145,7 +146,7 @@ const Dados = (() => {
       id: 't6', nome: 'Cátia Ribas', tom: 214,
       bairro: 'Bom Sucesso', cidade: 'Gravataí', uf: 'RS',
       endereco: 'Rua Dr. Barcelos, 88',
-      x: 2560, y: 460, verificada: false, ativa: true,
+      lat: -29.92362, lng: -51.03653, verificada: false, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551995117823', instagram: null,
       terapias: ['Radiestesia', 'Cristaloterapia', 'Limpeza Energética'],
@@ -167,7 +168,7 @@ const Dados = (() => {
       id: 't7', nome: 'Simone Baptista', tom: 340,
       bairro: 'Petrópolis', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua Veador Porto, 640 — sala 3',
-      x: 1830, y: 2060, verificada: false, ativa: true,
+      lat: -30.03941, lng: -51.18302, verificada: false, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551987554120', instagram: 'simonebaptista.aroma',
       terapias: ['Aromaterapia', 'Reiki', 'Cromoterapia'],
@@ -190,7 +191,7 @@ const Dados = (() => {
       id: 't8', nome: 'Neusa Trindade', tom: 292,
       bairro: 'Sarandi', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Av. Assis Brasil, 5900 — sala 208',
-      x: 1590, y: 950, verificada: true, ativa: true,
+      lat: -29.99859, lng: -51.12496, verificada: true, ativa: true,
       atendimento: ['presencial'],
       whatsapp: '5551992048866', instagram: 'neusa.trindade.terapias',
       terapias: ['Apometria', 'Tarô Terapêutico', 'Limpeza Energética'],
@@ -214,7 +215,7 @@ const Dados = (() => {
       id: 't9', nome: 'Priscila Amaral', tom: 12,
       bairro: 'Menino Deus', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua José de Alencar, 220 — apto 501',
-      x: 1700, y: 2440, verificada: false, ativa: true,
+      lat: -30.0557, lng: -51.22395, verificada: false, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551994778201', instagram: 'pri.amaral.access',
       terapias: ['Barras de Access', 'Limpeza Energética'],
@@ -234,7 +235,7 @@ const Dados = (() => {
       id: 't10', nome: 'Vera Lúcia Machado', tom: 275,
       bairro: 'Centro', cidade: 'Viamão', uf: 'RS',
       endereco: 'Rua Ary Tarrago, 130',
-      x: 2900, y: 2020, verificada: true, ativa: true,
+      lat: -30.08164, lng: -51.02763, verificada: true, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551996330177', instagram: 'veraluciamachado.apometria',
       terapias: ['Apometria', 'Mesa Radiônica', 'Limpeza Energética', 'Radiestesia'],
@@ -257,7 +258,7 @@ const Dados = (() => {
       id: 't11', nome: 'Elaine Kroth', tom: 190,
       bairro: 'Tristeza', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Av. Wenceslau Escobar, 2700 — sala 9',
-      x: 1560, y: 2960, verificada: false, ativa: true,
+      lat: -30.11032, lng: -51.25667, verificada: false, ativa: true,
       atendimento: ['presencial'],
       whatsapp: '5551988220945', instagram: 'elainekroth.cromo',
       terapias: ['Cromoterapia', 'Cristaloterapia'],
@@ -278,7 +279,7 @@ const Dados = (() => {
       id: 't12', nome: 'Tânia Boaventura', tom: 330,
       bairro: 'Centro', cidade: 'Alvorada', uf: 'RS',
       endereco: 'Av. Presidente Getúlio Vargas, 980',
-      x: 2380, y: 1330, verificada: false, ativa: true,
+      lat: -30.00033, lng: -51.07526, verificada: false, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551991660534', instagram: 'taniaboaventura.terapias',
       terapias: ['ThetaHealing', 'Reiki', 'Aromaterapia'],
@@ -298,6 +299,49 @@ const Dados = (() => {
     },
   ];
 
+  /* ------------------------------- do plano cartesiano para o mundo real
+     O protótipo nasceu num plano (120 px = 1 km) porque não havia mapa de
+     verdade. Com mapa real o que vale é latitude e longitude — e as duas vistas
+     têm de concordar, senão o mesmo pino cai numa esquina no mapa desenhado e
+     noutra no mapa real, e ninguém percebe até alguém comparar.
+
+     Por isso a conversão mora AQUI, uma vez só, e é usada pelo mapa desenhado,
+     pelo mapa real e pelo gerador da semente do banco.
+
+     ⚠️ As coordenadas preservam DISTÂNCIA e direção, ancoradas em Higienópolis.
+     Não são os endereços reais dos bairros citados — as pessoas são fictícias e
+     os endereços também. */
+  const ANCORA = { lat: -30.01382, lng: -51.18227 };   // Higienópolis, Porto Alegre
+  const KM_POR_GRAU_LAT = 111.32;
+  const KM_POR_GRAU_LNG = KM_POR_GRAU_LAT * Math.cos((ANCORA.lat * Math.PI) / 180);
+
+  function paraLatLng(x, y) {
+    return {
+      lat: +(ANCORA.lat - ((y - EU.y) / MUNDO.pxPorKm) / KM_POR_GRAU_LAT).toFixed(6),
+      lng: +(ANCORA.lng + ((x - EU.x) / MUNDO.pxPorKm) / KM_POR_GRAU_LNG).toFixed(6),
+    };
+  }
+
+  /* Distância real em km. No plano dava para usar Pitágoras; sobre a esfera,
+     não — e a diferença aparece justamente nas terapeutas mais longe, que são
+     as que o filtro de distância vai cortar. */
+  function distanciaEntre(a, b) {
+    const R = 6371;
+    const rad = (g) => (g * Math.PI) / 180;
+    const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2
+            + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  function paraPlano(lat, lng) {
+    return {
+      x: EU.x + (lng - ANCORA.lng) * KM_POR_GRAU_LNG * MUNDO.pxPorKm,
+      y: EU.y - (lat - ANCORA.lat) * KM_POR_GRAU_LAT * MUNDO.pxPorKm,
+    };
+  }
+
+
   /* ------------------------------------------- derivados (nunca à mão) */
   // Nota média, total de avaliações e faixa de preço são CALCULADOS, como manda
   // o arquivo 03 ("nota média sempre calculada, nunca editável à mão").
@@ -308,7 +352,11 @@ const Dados = (() => {
     const valores = t.servicos.map((s) => s.valor);
     t.precoMin = Math.min(...valores);
     t.precoMax = Math.max(...valores);
-    t.distanciaKm = Math.round(Math.hypot(t.x - EU.x, t.y - EU.y) / MUNDO.pxPorKm * 10) / 10;
+    // A coordenada REAL é o que está escrito; o plano do mapa desenhado é
+    // derivado dela. Era o contrário até o mapa de ruas entrar — e aí o bairro
+    // escrito deixou de bater com o lugar onde o pino caía.
+    Object.assign(t, paraPlano(t.lat, t.lng));
+    t.distanciaKm = Math.round(distanciaEntre(EU, t) * 10) / 10;
     t.iniciais = t.nome.split(' ').filter((p) => p.length > 2).slice(0, 2).map((p) => p[0]).join('');
   });
 
@@ -332,7 +380,7 @@ const Dados = (() => {
     perfil: {
       nome: '', bio: '', foto: null, tom: 268,
       endereco: '', bairro: '', cidade: 'Porto Alegre', uf: 'RS',
-      x: EU.x, y: EU.y,
+      x: EU.x, y: EU.y, lat: EU.lat, lng: EU.lng,
       terapias: new Set(), servicos: [], horarios: [],
       whatsapp: '', instagram: '', atendimento: new Set(['presencial']),
       visivel: true,
@@ -472,6 +520,7 @@ const Dados = (() => {
 
   return {
     MUNDO, EU, TERAPIAS, DIAS, DIAS_CURTO, TERAPEUTAS, estado,
+    ANCORA, paraLatLng, paraPlano, distanciaEntre,
     agora, estaAberta, proximaAbertura, horariosPorDia, emMinutos,
     listar, filtrosAtivos, porId, distribuicao,
     brl, distancia, haQuanto, duracao, linkZap,

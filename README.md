@@ -52,8 +52,10 @@ ficção, nada sai do aparelho e nada fica gravado.
 | | |
 |---|---|
 | 16 telas | os dois lados completos, do cadastro ao painel |
-| 1 arquivo | HTML auto-contido, roda **offline** — fontes embutidas, mapa desenhado por código |
-| 64 provas | em navegador real: fluxos, contraste, área de toque, 320 px, movimento reduzido |
+| 1 arquivo | HTML auto-contido — fontes embutidas, sem framework |
+| Mapa real | ruas de verdade com MapLibre + [OpenFreeMap](https://openfreemap.org) — sem chave, sem cadastro |
+| Plano B | sem internet ele cai num mapa desenhado por código e continua inteiro |
+| 65 provas | em navegador real: fluxos, contraste, área de toque, 320 px, movimento reduzido |
 | Android | APK instalável, provado em emulador |
 | Banco | SQL completo para Supabase + PostGIS, com RLS |
 
@@ -64,6 +66,12 @@ ficção, nada sai do aparelho e nada fica gravado.
 Um único arquivo HTML, sem framework e sem dependência externa. A razão é prática:
 o protótipo precisa abrir com duplo clique, funcionar sem internet e caber num link
 que se manda para uma terapeuta testar no celular dela.
+
+**Dois mapas, a mesma forma.** O de ruas reais (MapLibre + OpenFreeMap) e um
+desenhado por código. Os dois expõem as mesmas funções, então o aplicativo usa um
+ou outro sem saber qual — e se o mapa real não carregar, o desenhado assume e
+nada quebra. Há uma prova só para isso: `node teste/sem-mapa-real.js` bloqueia o
+MapLibre na rede e verifica que o app continua de pé.
 
 **A física do movimento é levada a sério.** Nada de transição de duração fixa: cada
 gesto é uma mola interrompível, que parte do valor que está na tela, herda a
@@ -91,7 +99,8 @@ teste/bancada.js      as 64 provas
 
 ```bash
 node montar.js                # src/ → index.html
-node teste/bancada.js         # as 64 provas (precisa de Playwright)
+node teste/bancada.js         # as 65 provas (precisa de Playwright)
+node teste/sem-mapa-real.js   # prova o plano B: bloqueia o mapa real e confere
 node banco/conferir.js        # 10 provas estáticas do SQL
 python android/montar_apk.py  # compila o APK (precisa de Android SDK + JDK 17–23)
 ```
@@ -104,7 +113,7 @@ python android/montar_apk.py  # compila o APK (precisa de Android SDK + JDK 17�
 |---|---|
 | Login aceita qualquer coisa | Supabase Auth: Google e código por celular |
 | Localização fixa | localização do aparelho, com escolha de cidade como plano B |
-| Mapa desenhado por código | MapLibre + OpenStreetMap |
+| Mapa sem endereço clicável | geocodificação do endereço digitado |
 | 12 terapeutas num arquivo JS | Postgres + PostGIS, busca por raio |
 | Favoritas e avaliações somem ao recarregar | gravadas no banco, com RLS |
 

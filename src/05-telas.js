@@ -340,7 +340,7 @@ const Telas = (() => {
   /* --- aba mapa ---------------------------------------------------------- */
   function abaMapa() {
     return `
-      <div class="mapa" id="mapa">
+      <div class="mapa" id="mapa">${MapaReal.disponivel() ? '' : `
         <div class="mapa__mundo" id="mundo" style="--z:1;width:${Dados.MUNDO.largura}px;height:${Dados.MUNDO.altura}px">
           ${Mapa.gerarSVG()}
           ${Mapa.rotulos()}
@@ -348,7 +348,7 @@ const Telas = (() => {
           <div class="eu" style="left:${Dados.EU.x}px;top:${Dados.EU.y}px">
             <div class="eu__halo"></div><div class="eu__nucleo"></div>
           </div>
-        </div>
+        </div>`}
       </div>
       <div class="mapa__topo">
         ${barraBusca()}
@@ -364,24 +364,43 @@ const Telas = (() => {
       </div>`;
   }
 
+  /* O DESENHO do pino, um só, usado pelos dois mapas.
+     O desenhado posiciona por `left/top` no plano; o real entrega o mesmo
+     elemento a um marcador do MapLibre, que cuida da posição. Se cada um
+     tivesse o seu, o mapa mudaria de cara ao trocar de motor. */
+  function pinoHTML(t, op = {}) {
+    const aberta = Dados.estaAberta(t);
+    const estilo = (op.posicionar ? `left:${t.x}px;top:${t.y}px;` : '')
+                 + (op.fora ? 'opacity:.22;pointer-events:none' : '');
+    return `<button class="pin ${aberta ? '' : 'pin--fechada'}" data-id="${t.id}" data-sel="0"
+      style="${estilo}" aria-label="${esc(t.nome)}, nota ${t.nota}">
+      <span class="pin__anel"></span>
+      <svg class="pin__corpo" viewBox="0 0 46 56" width="46" height="56" aria-hidden="true">
+        <path class="pin__forma" d="M23 55C23 55 43 36.5 43 21.5 43 10.2 34.05 1 23 1S3 10.2 3 21.5C3 36.5 23 55 23 55Z" fill="var(--violeta)"/>
+        <circle cx="23" cy="21" r="12.5" fill="#fff"/>
+        <text x="23" y="21.6" text-anchor="middle" dominant-baseline="central"
+              font-family="Nunito Sans, sans-serif" font-size="12" font-weight="900"
+              fill="var(--violeta-escuro)" letter-spacing="-0.4">${t.nota.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</text>
+      </svg>
+    </button>`;
+  }
+
+  /* Pino sem nota, para o mini-mapa do endereço */
+  function pinoSimplesHTML() {
+    return `<div style="width:34px;height:41px;filter:drop-shadow(0 3px 6px rgba(43,33,64,.3))">
+      <svg viewBox="0 0 46 56" width="34" height="41" aria-hidden="true">
+        <path d="M23 55C23 55 43 36.5 43 21.5 43 10.2 34.05 1 23 1S3 10.2 3 21.5C3 36.5 23 55 23 55Z" fill="var(--violeta)"/>
+        <circle cx="23" cy="21" r="9" fill="#fff"/>
+      </svg>
+    </div>`;
+  }
+
+  /* Só o mapa DESENHADO usa esta: ele pinta os 12 de uma vez dentro do mundo. */
   function pinsHTML() {
     const visiveis = new Set(Dados.listar().map((t) => t.id));
-    return Dados.TERAPEUTAS.filter((t) => t.ativa).map((t) => {
-      const aberta = Dados.estaAberta(t);
-      const fora = !visiveis.has(t.id);
-      return `<button class="pin ${aberta ? '' : 'pin--fechada'}" data-id="${t.id}" data-sel="0"
-        style="left:${t.x}px;top:${t.y}px;${fora ? 'opacity:.22;pointer-events:none' : ''}"
-        aria-label="${esc(t.nome)}, nota ${t.nota}">
-        <span class="pin__anel"></span>
-        <svg class="pin__corpo" viewBox="0 0 46 56" width="46" height="56" aria-hidden="true">
-          <path class="pin__forma" d="M23 55C23 55 43 36.5 43 21.5 43 10.2 34.05 1 23 1S3 10.2 3 21.5C3 36.5 23 55 23 55Z" fill="var(--violeta)"/>
-          <circle cx="23" cy="21" r="12.5" fill="#fff"/>
-          <text x="23" y="21.6" text-anchor="middle" dominant-baseline="central"
-                font-family="Nunito Sans, sans-serif" font-size="12" font-weight="900"
-                fill="var(--violeta-escuro)" letter-spacing="-0.4">${t.nota.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</text>
-        </svg>
-      </button>`;
-    }).join('');
+    return Dados.TERAPEUTAS.filter((t) => t.ativa)
+      .map((t) => pinoHTML(t, { posicionar: true, fora: !visiveis.has(t.id) }))
+      .join('');
   }
 
   function barraBusca() {
@@ -525,7 +544,7 @@ const Telas = (() => {
         <section class="secao">
           <div class="secao__titulo"><h2 class="d3">Onde ela atende</h2></div>
           <div class="cartao" style="padding:0;overflow:hidden">
-            <div class="minimapa" data-x="${t.x}" data-y="${t.y}" style="height:160px;position:relative;overflow:hidden;background:var(--mapa-solo)"></div>
+            <div class="minimapa" data-x="${t.x}" data-y="${t.y}" data-lat="${t.lat}" data-lng="${t.lng}" style="height:160px;position:relative;overflow:hidden;background:var(--mapa-solo)"></div>
             <div style="padding:14px">
               <p class="t2">${esc(t.endereco)}</p>
               <p class="pequeno dim mt4">${esc(t.bairro)}, ${esc(t.cidade)} — ${t.uf}</p>
@@ -856,7 +875,7 @@ const Telas = (() => {
         </label>
       </div>
       <div class="cartao" style="padding:0;overflow:hidden">
-        <div class="minimapa" id="mapaEndereco" data-arrastavel="1" data-x="${P.x}" data-y="${P.y}" style="height:210px;position:relative;overflow:hidden;background:var(--mapa-solo)"></div>
+        <div class="minimapa" id="mapaEndereco" data-arrastavel="1" data-x="${P.x}" data-y="${P.y}" data-lat="${P.lat}" data-lng="${P.lng}" style="height:210px;position:relative;overflow:hidden;background:var(--mapa-solo)"></div>
         <div style="padding:12px 14px">
           <p class="pequeno dim">${ic('info', 14)} Arraste o mapa para posicionar o pino no ponto certo.</p>
         </div>
@@ -1132,7 +1151,7 @@ const Telas = (() => {
   }
 
   return {
-    esc, ic, svg, ICONES, avatar, estrelas, lotus, cabecalho, cartaoTerapeuta, selo, ondeFica, pinsHTML,
+    esc, ic, svg, ICONES, avatar, estrelas, lotus, cabecalho, cartaoTerapeuta, selo, ondeFica, pinsHTML, pinoHTML, pinoSimplesHTML,
     entrar, telefone, codigo, papel, localizacao, cidades,
     raizCliente, abaMapa, abaLista, abaFavoritas, abaConta, barraAbas,
     folhaResumo, perfil, avaliar, filtros, denunciar, barraBusca, chipsFiltro, vazioBusca,

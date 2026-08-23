@@ -740,7 +740,7 @@ insert into profiles (id, papel, nome) values ('5b654564-0f14-4322-b56b-e21b34db
 -- 12 terapeutas fictícias
 -- ------------------------------------------------------------------------
 
--- 1. Rosane Albuquerque — Centro Histórico, Porto Alegre (2.9 km)
+-- 1. Rosane Albuquerque — Centro Histórico, Porto Alegre (5.1 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -759,7 +759,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '3ef906f0-882a-4f34-a2f9-9b40a651d747', 'Trabalho com Apometria há onze anos, num consultório no centro, com hora marcada e sem pressa. Atendo quem chega cansado da rotina e também quem já vem acompanhando um processo há tempo. A primeira conversa é sem custo, para a gente ver se faz sentido seguir junto.', 'Rua dos Andradas, 1200 — sala 43', 'Centro Histórico', 'Porto Alegre', 'RS',
-  st_setsrid(st_makepoint(-51.207916, -30.042952), 4326)::geography,
+  st_setsrid(st_makepoint(-51.23033, -30.0325), 4326)::geography,
   '{"presencial","online"}', '5551999120043', 'rosane.apometria',
   true, true, false
 ) on conflict (user_id) do nothing;
@@ -826,7 +826,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '95 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 2. Marina Corrêa — Bom Fim, Porto Alegre (1.4 km)
+-- 2. Marina Corrêa — Bom Fim, Porto Alegre (3.6 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -845,7 +845,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '5872b277-3129-4816-a7fa-4f4fa2a227f3', 'Reikiana desde 2018, formada nos três níveis. Atendo numa casa antiga do Bom Fim, com jardim. Gosto de combinar o Reiki com cromoterapia quando a pessoa está num período de muita agitação.', 'Rua Fernandes Vieira, 380 — casa 2', 'Bom Fim', 'Porto Alegre', 'RS',
-  st_setsrid(st_makepoint(-51.20489, -30.029852), 4326)::geography,
+  st_setsrid(st_makepoint(-51.21172, -30.0334), 4326)::geography,
   '{"presencial"}', '5551998451207', 'marinacorrea.reiki',
   false, true, false
 ) on conflict (user_id) do nothing;
@@ -908,7 +908,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '80 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 3. Lúcia Fontoura — Vila Betânia, Cachoeirinha (14 km)
+-- 3. Lúcia Fontoura — Vila Betânia, Cachoeirinha (11.4 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -927,7 +927,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '76a2417e-35d9-4142-a5b7-a4d57774b6ff', 'Formada em Apometria pela linha do Dr. Lacerda e sigo estudando todo ano. Atendo em Cachoeirinha e também on-line para quem mora longe. Trabalho com agenda enxuta porque prefiro poucos atendimentos bem feitos por semana.', 'Av. Flores da Cunha, 2400 — sala 12', 'Vila Betânia', 'Cachoeirinha', 'RS',
-  st_setsrid(st_makepoint(-51.199271, -29.891736), 4326)::geography,
+  st_setsrid(st_makepoint(-51.08989, -29.94934), 4326)::geography,
   '{"presencial","online"}', '5551997330288', 'lucia.fontoura.apometria',
   true, true, false
 ) on conflict (user_id) do nothing;
@@ -986,7 +986,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '72 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 4. Bianca Nunes — Moinhos de Vento, Porto Alegre (1 km)
+-- 4. Bianca Nunes — Moinhos de Vento, Porto Alegre (2.5 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -1005,7 +1005,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   'b64ad8bf-a5fd-4690-a0cc-a890a3bfee6e', 'Facilitadora de ThetaHealing e Barras de Access, com consultório nos Moinhos. Meu trabalho é bem direcionado a crenças que travam decisões — carreira, dinheiro, relacionamento. Também conduzo constelação em grupo uma vez por mês.', 'Rua Padre Chagas, 90 — conjunto 704', 'Moinhos de Vento', 'Porto Alegre', 'RS',
-  st_setsrid(st_makepoint(-51.201865, -30.026483), 4326)::geography,
+  st_setsrid(st_makepoint(-51.20542, -30.02407), 4326)::geography,
   '{"presencial","online"}', '5551991887744', 'biancanunes.theta',
   true, true, false
 ) on conflict (user_id) do nothing;
@@ -1072,7 +1072,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '88 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 5. Denise Wachholz — Marechal Rondon, Canoas (10.5 km)
+-- 5. Denise Wachholz — Marechal Rondon, Canoas (10.3 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -1091,7 +1091,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '2d49397d-7677-48b0-902e-ef489ec3a923', 'Constelo há sete anos e trago a Apometria quando o caso pede uma limpeza antes do trabalho sistêmico. Atendo em Canoas, em sala própria, sempre com hora marcada.', 'Rua Ipiranga, 515', 'Marechal Rondon', 'Canoas', 'RS',
-  st_setsrid(st_makepoint(-51.161231, -29.929915), 4326)::geography,
+  st_setsrid(st_makepoint(-51.16301, -29.92233), 4326)::geography,
   '{"presencial"}', '5551996204411', 'denise.constelacao',
   false, true, false
 ) on conflict (user_id) do nothing;
@@ -1140,7 +1140,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '91 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 6. Cátia Ribas — Bom Sucesso, Gravataí (14 km)
+-- 6. Cátia Ribas — Bom Sucesso, Gravataí (17.3 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -1159,7 +1159,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '5602da52-129a-4ec7-a42a-b51a20247242', 'Trabalho com radiestesia e cristais, principalmente em análise de ambiente e de objetos. Atendo em Gravataí e faço avaliação à distância com foto e planta da casa.', 'Rua Dr. Barcelos, 88', 'Bom Sucesso', 'Gravataí', 'RS',
-  st_setsrid(st_makepoint(-51.126648, -29.909703), 4326)::geography,
+  st_setsrid(st_makepoint(-51.03653, -29.92362), 4326)::geography,
   '{"presencial","online"}', '5551995117823', null,
   false, true, false
 ) on conflict (user_id) do nothing;
@@ -1214,7 +1214,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '110 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 7. Simone Baptista — Petrópolis, Porto Alegre (1.7 km)
+-- 7. Simone Baptista — Petrópolis, Porto Alegre (2.8 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -1233,7 +1233,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '65d8c37e-acd7-44bf-b6ef-35bb130e3516', 'Aromaterapeuta com formação clínica. Monto blends personalizados para cada pessoa e uso o Reiki como apoio. Atendo no Petrópolis, num prédio com elevador e acesso fácil.', 'Rua Veador Porto, 640 — sala 3', 'Petrópolis', 'Porto Alegre', 'RS',
-  st_setsrid(st_makepoint(-51.189761, -30.029477), 4326)::geography,
+  st_setsrid(st_makepoint(-51.18302, -30.03941), 4326)::geography,
   '{"presencial","online"}', '5551987554120', 'simonebaptista.aroma',
   false, true, false
 ) on conflict (user_id) do nothing;
@@ -1300,7 +1300,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '102 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 8. Neusa Trindade — Sarandi, Porto Alegre (8 km)
+-- 8. Neusa Trindade — Sarandi, Porto Alegre (5.8 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -1319,7 +1319,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '8df11063-b297-4ad3-be36-e42c96099826', 'Atendo no Sarandi há quase vinte anos, no mesmo endereço. Faço Apometria e uso o tarô como leitura de apoio, nunca como previsão. Quem chega aqui sabe que vai ouvir a verdade com cuidado.', 'Av. Assis Brasil, 5900 — sala 208', 'Sarandi', 'Porto Alegre', 'RS',
-  st_setsrid(st_makepoint(-51.21051, -29.946384), 4326)::geography,
+  st_setsrid(st_makepoint(-51.12496, -29.99859), 4326)::geography,
   '{"presencial"}', '5551992048866', 'neusa.trindade.terapias',
   true, true, false
 ) on conflict (user_id) do nothing;
@@ -1390,7 +1390,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '120 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 9. Priscila Amaral — Menino Deus, Porto Alegre (4.5 km)
+-- 9. Priscila Amaral — Menino Deus, Porto Alegre (6.1 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -1409,7 +1409,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '2bacc666-5b79-4245-b2e8-5e6c6354921d', 'Facilitadora de Barras de Access, formada em 2024. Atendo no Menino Deus, em horários flexíveis, inclusive à noite para quem trabalha durante o dia. Estou começando e por isso mantenho um valor de entrada.', 'Rua José de Alencar, 220 — apto 501', 'Menino Deus', 'Porto Alegre', 'RS',
-  st_setsrid(st_makepoint(-51.201, -30.057924), 4326)::geography,
+  st_setsrid(st_makepoint(-51.22395, -30.0557), 4326)::geography,
   '{"presencial","online"}', '5551994778201', 'pri.amaral.access',
   false, true, false
 ) on conflict (user_id) do nothing;
@@ -1462,7 +1462,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '60 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 10. Vera Lúcia Machado — Centro, Viamão (10 km)
+-- 10. Vera Lúcia Machado — Centro, Viamão (16.7 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -1481,7 +1481,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '379822e3-e4d0-485a-aee1-c656e27b2e96', 'Apometra e radiestesista. Atendo em Viamão e faço mesa radiônica à distância para todo o estado. Sou de falar pouco e trabalhar muito: a sessão é o centro, não a conversa em volta.', 'Rua Ary Tarrago, 130', 'Centro', 'Viamão', 'RS',
-  st_setsrid(st_makepoint(-51.097254, -30.026483), 4326)::geography,
+  st_setsrid(st_makepoint(-51.02763, -30.08164), 4326)::geography,
   '{"presencial","online"}', '5551996330177', 'veraluciamachado.apometria',
   true, true, false
 ) on conflict (user_id) do nothing;
@@ -1547,7 +1547,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '104 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 11. Elaine Kroth — Tristeza, Porto Alegre (8.9 km)
+-- 11. Elaine Kroth — Tristeza, Porto Alegre (12.9 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -1566,7 +1566,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   'd7881ba6-51b6-4411-9c29-2fd8e16c99e4', 'Cromoterapeuta, atendo na Tristeza em sala compartilhada. Trabalho principalmente com quem tem dificuldade de sono e ansiedade leve, sempre como apoio a um acompanhamento de saúde, nunca no lugar dele.', 'Av. Wenceslau Escobar, 2700 — sala 9', 'Tristeza', 'Porto Alegre', 'RS',
-  st_setsrid(st_makepoint(-51.213104, -30.096851), 4326)::geography,
+  st_setsrid(st_makepoint(-51.25667, -30.11032), 4326)::geography,
   '{"presencial"}', '5551988220945', 'elainekroth.cromo',
   false, true, false
 ) on conflict (user_id) do nothing;
@@ -1611,7 +1611,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '99 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 
--- 12. Tânia Boaventura — Centro, Alvorada (7.4 km)
+-- 12. Tânia Boaventura — Centro, Alvorada (10.4 km)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin,
@@ -1630,7 +1630,7 @@ insert into perfis_terapeuta (
   atendimento, whatsapp, instagram, verificada, ativa, so_bairro
 ) values (
   '3278673d-bf43-47b2-b691-e6d973978b4b', 'Atendo em Alvorada, perto do centro, e on-line à noite. Combino ThetaHealing com Reiki conforme o momento de cada pessoa. Tenho horário aos domingos porque muita gente só consegue nesse dia.', 'Av. Presidente Getúlio Vargas, 980', 'Centro', 'Alvorada', 'RS',
-  st_setsrid(st_makepoint(-51.14221, -29.97483), 4326)::geography,
+  st_setsrid(st_makepoint(-51.07526, -30.00033), 4326)::geography,
   '{"presencial","online"}', '5551991660534', 'taniaboaventura.terapias',
   false, true, false
 ) on conflict (user_id) do nothing;
@@ -1705,5 +1705,5 @@ order by pr.nome;
 -- A busca principal, do jeito que o app vai chamar (a partir de Higienópolis).
 select nome, bairro, cidade, round(distancia_m::numeric/1000, 1) as km,
        nota_media, total_avaliacoes, aberta_agora
-from terapeutas_proximas(-30.0175, -51.201, 30000);
+from terapeutas_proximas(-30.01382, -51.18227, 30000);
 

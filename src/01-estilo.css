@@ -527,6 +527,35 @@ a { color: inherit; }
   text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 1px 2px rgba(255,255,255,0.95);
 }
 
+/* ---- encaixe do MapLibre (mapa de ruas real) ---- */
+/* O crédito de OpenFreeMap/OpenStreetMap é obrigação de licença. Ele fica
+   discreto, mas fica: subiu acima da barra de abas para não ser tapado. */
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right {
+  bottom: calc(var(--altura-tab) + var(--base) - 4px);
+  z-index: 20;
+}
+.maplibregl-ctrl-attrib {
+  font-size: 0.62rem;
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-radius: var(--r-pilula) !important;
+}
+.maplibregl-ctrl-attrib a { color: var(--texto-2); }
+/* O logotipo do MapLibre não é exigido pela licença dos dados e rouba espaço
+   numa tela de celular; o crédito das FONTES DE DADOS continua. */
+.maplibregl-ctrl-logo { display: none; }
+.mapa .maplibregl-canvas { outline: none; }
+
+/* Dentro de um marcador do MapLibre o pino não se posiciona sozinho nem
+   contra-escala: quem cuida disso é o marcador. */
+.maplibregl-marker .pin,
+.maplibregl-marker .eu { position: relative; margin: 0; transform: none; }
+.maplibregl-marker .pin[data-sel="1"] { z-index: 5; }
+
+/* No mini-mapa o crédito volta para o canto de baixo do próprio quadro */
+.minimapa .maplibregl-ctrl-bottom-right { bottom: 0; }
+.minimapa .maplibregl-ctrl-attrib { font-size: 0.55rem; }
+
 /* Controles flutuantes sobre o mapa */
 .mapa__topo { position: absolute; top: 0; left: 0; right: 0; z-index: 30; padding-top: calc(var(--topo) + 4px); pointer-events: none; }
 .mapa__topo > * { pointer-events: auto; }

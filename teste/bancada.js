@@ -103,7 +103,7 @@ function checa(cond, nome, detalhe = '') {
   async function enquadrar(pag, id) {
     await pag.evaluate((tid) => {
       const t = Dados.porId(tid);
-      App.mapa.centralizar(t.x, t.y, 0.7, false);
+      App.mapa.centralizar(t.lat, t.lng, 'pessoa', false);
     }, id);
     await pag.waitForTimeout(220);
   }
@@ -134,6 +134,10 @@ function checa(cond, nome, detalhe = '') {
   await clicar('[data-a="permitirLocal"]', 900);
 
   checa(await p.isVisible('#mapa'), 'mapa abriu');
+  // No mapa real os pinos só nascem depois que o estilo baixa (~1,5 s medido).
+  // Contar antes disso acusa "0 pinos" e o defeito não existe.
+  await p.waitForFunction(() => document.querySelectorAll('.pin').length === 12, null,
+                          { timeout: 20000 }).catch(() => {});
   const nPins = await p.$$eval('.pin', (e) => e.length);
   checa(nPins === 12, 'os 12 pinos estão no mapa', `achei ${nPins}`);
   await overflow('mapa');
@@ -151,34 +155,71 @@ function checa(cond, nome, detalhe = '') {
      Medir arrasto exige PARAR antes de soltar; parar antes de soltar zera a
      velocidade e mata o momento. Os dois não cabem no mesmo gesto. Então são
      dois: um arrasto calmo para o rastreio, um peteleco para a inércia. */
-  const posicaoMundo = async () => p.$eval('#mundo', (e) => {
-    const m = e.style.transform.match(/translate3d\(([-\d.]+)px,\s*([-\d.]+)px/);
+  /* Onde, NA TELA, está um ponto fixo do mundo. Serve para os dois motores:
+
+       desenhado — o `translate3d` do mundo É o deslocamento da tela;
+       real      — projeta a coordenada da usuária para pixel de tela.
+
+     Sem isso a prova só valeria para um dos mapas, e o outro passaria a andar
+     sem ninguém olhando. */
+  const posicaoMapa = async () => p.evaluate(() => {
+    if (App.mapa && App.mapa.motor === 'real') {
+      const q = App.mapa.bruto.project([Dados.EU.lng, Dados.EU.lat]);
+      return { x: q.x, y: q.y };
+    }
+    const e = document.getElementById('mundo');
+    const m = e && e.style.transform.match(/translate3d\(([-\d.]+)px,\s*([-\d.]+)px/);
     return m ? { x: parseFloat(m[1]), y: parseFloat(m[2]) } : { x: 0, y: 0 };
   });
 
+  const motor = await p.evaluate(() => (App.mapa ? App.mapa.motor : 'nenhum'));
+  checa(motor === 'real' || motor === 'desenhado', 'o mapa subiu com um motor', motor);
+
   // (a) rastreio 1:1 — arrasta devagar e mede AINDA COM O BOTÃO PRESSIONADO
-  const antes = await posicaoMundo();
+  const antes = await posicaoMapa();
   await p.mouse.move(260, 480);
   await p.mouse.down();
   for (let i = 1; i <= 6; i++) { await p.mouse.move(260 - i * 26, 480 - i * 18, { steps: 3 }); }
-  const segurando = await posicaoMundo();
+  const segurando = await posicaoMapa();
   const arrastou = Math.hypot(segurando.x - antes.x, segurando.y - antes.y);
   await p.mouse.up();
   await p.waitForTimeout(800);
   checa(arrastou > 100, 'o mapa segue o dedo durante o arrasto', `andou ${arrastou.toFixed(0)} px`);
 
-  // (b) momento — peteleco sem pausa, e as DUAS amostras são depois da soltura,
-  //     as duas dentro do domínio da mola. Sem inércia, em 60 ms já parou.
-  await p.mouse.move(300, 520);
-  await p.mouse.down();
-  for (let i = 1; i <= 6; i++) { await p.mouse.move(300 - i * 30, 520 - i * 20); }
-  await p.mouse.up();
-  await p.waitForTimeout(60);
-  const logoDepois = await posicaoMundo();
-  await p.waitForTimeout(1100);
-  const assentado = await posicaoMundo();
-  const inercia = Math.hypot(assentado.x - logoDepois.x, assentado.y - logoDepois.y);
-  checa(inercia > 20, 'o mapa continua andando depois de soltar (momento)', `mais ${inercia.toFixed(0)} px sozinho`);
+  /* (b) momento — só faz sentido no mapa DESENHADO, porque a mola é NOSSA.
+
+     No mapa real quem trata a inércia é o MapLibre, e foi MEDIDO (teste/sonda-mapa.js)
+     que ela não responde a mouse sintético: arrasto de 4111 m, inércia de 0 m.
+     Afirmar aqui que "o momento funciona" seria medir a fidelidade do Playwright,
+     não o aplicativo — e uma prova que mede a coisa errada é pior que prova
+     nenhuma, porque dá confiança sem base.
+
+     O que se prova no motor real é o que É nosso: que `centralizar` leva o mapa
+     até a terapeuta. */
+  if (motor === 'desenhado') {
+    await p.mouse.move(300, 520);
+    await p.mouse.down();
+    for (let i = 1; i <= 6; i++) { await p.mouse.move(300 - i * 30, 520 - i * 20); }
+    await p.mouse.up();
+    await p.waitForTimeout(60);
+    const logoDepois = await posicaoMapa();
+    await p.waitForTimeout(1100);
+    const assentado = await posicaoMapa();
+    const inercia = Math.hypot(assentado.x - logoDepois.x, assentado.y - logoDepois.y);
+    checa(inercia > 20, 'o mapa continua andando depois de soltar (momento)', `mais ${inercia.toFixed(0)} px sozinho`);
+  } else {
+    const alvo = await p.evaluate(() => {
+      const t = Dados.porId('t8');                       // Sarandi, 8 km ao norte
+      App.mapa.centralizar(t.lat, t.lng, 'pessoa', false);
+      const c = App.mapa.bruto.getCenter();
+      return { dLat: Math.abs(c.lat - t.lat), dLng: Math.abs(c.lng - t.lng) };
+    });
+    checa(alvo.dLat < 0.02 && alvo.dLng < 0.02,
+      'centralizar leva o mapa até a terapeuta',
+      `erro ${(alvo.dLat * 111320).toFixed(0)} m`);
+    await p.evaluate(() => App.mapa.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao', false));
+    await p.waitForTimeout(300);
+  }
 
   /* toque num pino abre a folha */
   await enquadrar(p, 't1');

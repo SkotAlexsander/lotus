@@ -7,9 +7,19 @@
 <meta name="description" content="Protótipo navegável do app que mostra terapeutas holísticas e apometras perto de você.">
 <title>Mapa Holístico</title>
 
-<!-- Nenhuma requisição externa: as fontes estão embutidas no <style> abaixo
-     (ferramentas/embutir_fontes.js). Dentro do APK isto é o que garante que o
-     app tenha a mesma cara com e sem internet. -->
+<!-- As FONTES estão embutidas no <style> abaixo (ferramentas/embutir_fontes.js):
+     nada de tipografia depende da rede.
+
+     O MapLibre é a única coisa que vem de fora, e é opcional de propósito:
+     ele desenha o mapa de RUAS DE VERDADE. Se não carregar — sem internet, CDN
+     fora do ar, navegador antigo — o app cai no mapa desenhado por código e
+     continua inteiro. É por isso que ele entra com `defer` e ninguém espera
+     por ele.
+
+     ⚠️ Versão FIXA. Apontar para a mais nova faz o app quebrar sozinho no dia
+     em que a biblioteca mudar, sem ninguém ter tocado em nada aqui. -->
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css">
+<script defer src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
 
 <style>
 /* ============================================================================
@@ -568,6 +578,35 @@ a { color: inherit; }
   text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 1px 2px rgba(255,255,255,0.95);
 }
 
+/* ---- encaixe do MapLibre (mapa de ruas real) ---- */
+/* O crédito de OpenFreeMap/OpenStreetMap é obrigação de licença. Ele fica
+   discreto, mas fica: subiu acima da barra de abas para não ser tapado. */
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right {
+  bottom: calc(var(--altura-tab) + var(--base) - 4px);
+  z-index: 20;
+}
+.maplibregl-ctrl-attrib {
+  font-size: 0.62rem;
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-radius: var(--r-pilula) !important;
+}
+.maplibregl-ctrl-attrib a { color: var(--texto-2); }
+/* O logotipo do MapLibre não é exigido pela licença dos dados e rouba espaço
+   numa tela de celular; o crédito das FONTES DE DADOS continua. */
+.maplibregl-ctrl-logo { display: none; }
+.mapa .maplibregl-canvas { outline: none; }
+
+/* Dentro de um marcador do MapLibre o pino não se posiciona sozinho nem
+   contra-escala: quem cuida disso é o marcador. */
+.maplibregl-marker .pin,
+.maplibregl-marker .eu { position: relative; margin: 0; transform: none; }
+.maplibregl-marker .pin[data-sel="1"] { z-index: 5; }
+
+/* No mini-mapa o crédito volta para o canto de baixo do próprio quadro */
+.minimapa .maplibregl-ctrl-bottom-right { bottom: 0; }
+.minimapa .maplibregl-ctrl-attrib { font-size: 0.55rem; }
+
 /* Controles flutuantes sobre o mapa */
 .mapa__topo { position: absolute; top: 0; left: 0; right: 0; z-index: 30; padding-top: calc(var(--topo) + 4px); pointer-events: none; }
 .mapa__topo > * { pointer-events: auto; }
@@ -1068,8 +1107,9 @@ const Dados = (() => {
 
   /* ---------------------------------------------------- mundo do mapa */
   // Plano cartesiano em pixels. 120 px = 1 km. O mundo inteiro tem ~28 km.
-  const MUNDO = { largura: 3400, altura: 3400, pxPorKm: 120 };
-  const EU = { x: 1700, y: 1900, bairro: 'Higienópolis', cidade: 'Porto Alegre', uf: 'RS' };
+  const MUNDO = { largura: 4400, altura: 4400, pxPorKm: 120 };
+  const EU = { x: 2000, y: 2100, lat: -30.01382, lng: -51.18227,
+               bairro: 'Higienópolis', cidade: 'Porto Alegre', uf: 'RS' };
 
   /* --------------------------------------------- catálogo de terapias */
   // No app real esta lista é uma tabela controlada pelo admin (arquivo 03),
@@ -1092,7 +1132,7 @@ const Dados = (() => {
       id: 't1', nome: 'Rosane Albuquerque', tom: 268,
       bairro: 'Centro Histórico', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua dos Andradas, 1200 — sala 43',
-      x: 1620, y: 2240, verificada: true, ativa: true,
+      lat: -30.0325, lng: -51.23033, verificada: true, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551999120043', instagram: 'rosane.apometria',
       terapias: ['Apometria', 'Limpeza Energética', 'Mesa Radiônica'],
@@ -1115,7 +1155,7 @@ const Dados = (() => {
       id: 't2', nome: 'Marina Corrêa', tom: 305,
       bairro: 'Bom Fim', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua Fernandes Vieira, 380 — casa 2',
-      x: 1655, y: 2065, verificada: false, ativa: true,
+      lat: -30.0334, lng: -51.21172, verificada: false, ativa: true,
       atendimento: ['presencial'],
       whatsapp: '5551998451207', instagram: 'marinacorrea.reiki',
       terapias: ['Reiki', 'Cromoterapia', 'Aromaterapia'],
@@ -1138,7 +1178,7 @@ const Dados = (() => {
       id: 't3', nome: 'Lúcia Fontoura', tom: 282,
       bairro: 'Vila Betânia', cidade: 'Cachoeirinha', uf: 'RS',
       endereco: 'Av. Flores da Cunha, 2400 — sala 12',
-      x: 1720, y: 220, verificada: true, ativa: true,
+      lat: -29.94934, lng: -51.08989, verificada: true, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551997330288', instagram: 'lucia.fontoura.apometria',
       terapias: ['Apometria', 'Mesa Radiônica', 'Limpeza Energética'],
@@ -1160,7 +1200,7 @@ const Dados = (() => {
       id: 't4', nome: 'Bianca Nunes', tom: 322,
       bairro: 'Moinhos de Vento', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua Padre Chagas, 90 — conjunto 704',
-      x: 1690, y: 2020, verificada: true, ativa: true,
+      lat: -30.02407, lng: -51.20542, verificada: true, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551991887744', instagram: 'biancanunes.theta',
       terapias: ['ThetaHealing', 'Barras de Access', 'Constelação Familiar'],
@@ -1184,7 +1224,7 @@ const Dados = (() => {
       id: 't5', nome: 'Denise Wachholz', tom: 258,
       bairro: 'Marechal Rondon', cidade: 'Canoas', uf: 'RS',
       endereco: 'Rua Ipiranga, 515',
-      x: 2160, y: 730, verificada: false, ativa: true,
+      lat: -29.92233, lng: -51.16301, verificada: false, ativa: true,
       atendimento: ['presencial'],
       whatsapp: '5551996204411', instagram: 'denise.constelacao',
       terapias: ['Constelação Familiar', 'Apometria'],
@@ -1205,7 +1245,7 @@ const Dados = (() => {
       id: 't6', nome: 'Cátia Ribas', tom: 214,
       bairro: 'Bom Sucesso', cidade: 'Gravataí', uf: 'RS',
       endereco: 'Rua Dr. Barcelos, 88',
-      x: 2560, y: 460, verificada: false, ativa: true,
+      lat: -29.92362, lng: -51.03653, verificada: false, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551995117823', instagram: null,
       terapias: ['Radiestesia', 'Cristaloterapia', 'Limpeza Energética'],
@@ -1227,7 +1267,7 @@ const Dados = (() => {
       id: 't7', nome: 'Simone Baptista', tom: 340,
       bairro: 'Petrópolis', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua Veador Porto, 640 — sala 3',
-      x: 1830, y: 2060, verificada: false, ativa: true,
+      lat: -30.03941, lng: -51.18302, verificada: false, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551987554120', instagram: 'simonebaptista.aroma',
       terapias: ['Aromaterapia', 'Reiki', 'Cromoterapia'],
@@ -1250,7 +1290,7 @@ const Dados = (() => {
       id: 't8', nome: 'Neusa Trindade', tom: 292,
       bairro: 'Sarandi', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Av. Assis Brasil, 5900 — sala 208',
-      x: 1590, y: 950, verificada: true, ativa: true,
+      lat: -29.99859, lng: -51.12496, verificada: true, ativa: true,
       atendimento: ['presencial'],
       whatsapp: '5551992048866', instagram: 'neusa.trindade.terapias',
       terapias: ['Apometria', 'Tarô Terapêutico', 'Limpeza Energética'],
@@ -1274,7 +1314,7 @@ const Dados = (() => {
       id: 't9', nome: 'Priscila Amaral', tom: 12,
       bairro: 'Menino Deus', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Rua José de Alencar, 220 — apto 501',
-      x: 1700, y: 2440, verificada: false, ativa: true,
+      lat: -30.0557, lng: -51.22395, verificada: false, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551994778201', instagram: 'pri.amaral.access',
       terapias: ['Barras de Access', 'Limpeza Energética'],
@@ -1294,7 +1334,7 @@ const Dados = (() => {
       id: 't10', nome: 'Vera Lúcia Machado', tom: 275,
       bairro: 'Centro', cidade: 'Viamão', uf: 'RS',
       endereco: 'Rua Ary Tarrago, 130',
-      x: 2900, y: 2020, verificada: true, ativa: true,
+      lat: -30.08164, lng: -51.02763, verificada: true, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551996330177', instagram: 'veraluciamachado.apometria',
       terapias: ['Apometria', 'Mesa Radiônica', 'Limpeza Energética', 'Radiestesia'],
@@ -1317,7 +1357,7 @@ const Dados = (() => {
       id: 't11', nome: 'Elaine Kroth', tom: 190,
       bairro: 'Tristeza', cidade: 'Porto Alegre', uf: 'RS',
       endereco: 'Av. Wenceslau Escobar, 2700 — sala 9',
-      x: 1560, y: 2960, verificada: false, ativa: true,
+      lat: -30.11032, lng: -51.25667, verificada: false, ativa: true,
       atendimento: ['presencial'],
       whatsapp: '5551988220945', instagram: 'elainekroth.cromo',
       terapias: ['Cromoterapia', 'Cristaloterapia'],
@@ -1338,7 +1378,7 @@ const Dados = (() => {
       id: 't12', nome: 'Tânia Boaventura', tom: 330,
       bairro: 'Centro', cidade: 'Alvorada', uf: 'RS',
       endereco: 'Av. Presidente Getúlio Vargas, 980',
-      x: 2380, y: 1330, verificada: false, ativa: true,
+      lat: -30.00033, lng: -51.07526, verificada: false, ativa: true,
       atendimento: ['presencial', 'online'],
       whatsapp: '5551991660534', instagram: 'taniaboaventura.terapias',
       terapias: ['ThetaHealing', 'Reiki', 'Aromaterapia'],
@@ -1358,6 +1398,49 @@ const Dados = (() => {
     },
   ];
 
+  /* ------------------------------- do plano cartesiano para o mundo real
+     O protótipo nasceu num plano (120 px = 1 km) porque não havia mapa de
+     verdade. Com mapa real o que vale é latitude e longitude — e as duas vistas
+     têm de concordar, senão o mesmo pino cai numa esquina no mapa desenhado e
+     noutra no mapa real, e ninguém percebe até alguém comparar.
+
+     Por isso a conversão mora AQUI, uma vez só, e é usada pelo mapa desenhado,
+     pelo mapa real e pelo gerador da semente do banco.
+
+     ⚠️ As coordenadas preservam DISTÂNCIA e direção, ancoradas em Higienópolis.
+     Não são os endereços reais dos bairros citados — as pessoas são fictícias e
+     os endereços também. */
+  const ANCORA = { lat: -30.01382, lng: -51.18227 };   // Higienópolis, Porto Alegre
+  const KM_POR_GRAU_LAT = 111.32;
+  const KM_POR_GRAU_LNG = KM_POR_GRAU_LAT * Math.cos((ANCORA.lat * Math.PI) / 180);
+
+  function paraLatLng(x, y) {
+    return {
+      lat: +(ANCORA.lat - ((y - EU.y) / MUNDO.pxPorKm) / KM_POR_GRAU_LAT).toFixed(6),
+      lng: +(ANCORA.lng + ((x - EU.x) / MUNDO.pxPorKm) / KM_POR_GRAU_LNG).toFixed(6),
+    };
+  }
+
+  /* Distância real em km. No plano dava para usar Pitágoras; sobre a esfera,
+     não — e a diferença aparece justamente nas terapeutas mais longe, que são
+     as que o filtro de distância vai cortar. */
+  function distanciaEntre(a, b) {
+    const R = 6371;
+    const rad = (g) => (g * Math.PI) / 180;
+    const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2
+            + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  function paraPlano(lat, lng) {
+    return {
+      x: EU.x + (lng - ANCORA.lng) * KM_POR_GRAU_LNG * MUNDO.pxPorKm,
+      y: EU.y - (lat - ANCORA.lat) * KM_POR_GRAU_LAT * MUNDO.pxPorKm,
+    };
+  }
+
+
   /* ------------------------------------------- derivados (nunca à mão) */
   // Nota média, total de avaliações e faixa de preço são CALCULADOS, como manda
   // o arquivo 03 ("nota média sempre calculada, nunca editável à mão").
@@ -1368,7 +1451,11 @@ const Dados = (() => {
     const valores = t.servicos.map((s) => s.valor);
     t.precoMin = Math.min(...valores);
     t.precoMax = Math.max(...valores);
-    t.distanciaKm = Math.round(Math.hypot(t.x - EU.x, t.y - EU.y) / MUNDO.pxPorKm * 10) / 10;
+    // A coordenada REAL é o que está escrito; o plano do mapa desenhado é
+    // derivado dela. Era o contrário até o mapa de ruas entrar — e aí o bairro
+    // escrito deixou de bater com o lugar onde o pino caía.
+    Object.assign(t, paraPlano(t.lat, t.lng));
+    t.distanciaKm = Math.round(distanciaEntre(EU, t) * 10) / 10;
     t.iniciais = t.nome.split(' ').filter((p) => p.length > 2).slice(0, 2).map((p) => p[0]).join('');
   });
 
@@ -1392,7 +1479,7 @@ const Dados = (() => {
     perfil: {
       nome: '', bio: '', foto: null, tom: 268,
       endereco: '', bairro: '', cidade: 'Porto Alegre', uf: 'RS',
-      x: EU.x, y: EU.y,
+      x: EU.x, y: EU.y, lat: EU.lat, lng: EU.lng,
       terapias: new Set(), servicos: [], horarios: [],
       whatsapp: '', instagram: '', atendimento: new Set(['presencial']),
       visivel: true,
@@ -1532,6 +1619,7 @@ const Dados = (() => {
 
   return {
     MUNDO, EU, TERAPIAS, DIAS, DIAS_CURTO, TERAPEUTAS, estado,
+    ANCORA, paraLatLng, paraPlano, distanciaEntre,
     agora, estaAberta, proximaAbertura, horariosPorDia, emMinutos,
     listar, filtrosAtivos, porId, distribuicao,
     brl, distancia, haQuanto, duracao, linkZap,
@@ -1563,21 +1651,24 @@ const Mapa = (() => {
     };
   }
 
-  const BAIRROS = [
-    { nome: 'Centro Histórico', x: 1600, y: 2270 },
-    { nome: 'Bom Fim', x: 1640, y: 2080 },
-    { nome: 'Moinhos de Vento', x: 1735, y: 1985 },
-    { nome: 'Petrópolis', x: 1900, y: 2075 },
-    { nome: 'Menino Deus', x: 1710, y: 2470 },
-    { nome: 'Higienópolis', x: 1700, y: 1830 },
-    { nome: 'Tristeza', x: 1520, y: 3000 },
-    { nome: 'Sarandi', x: 1560, y: 900 },
-    { nome: 'Canoas', x: 2180, y: 680 },
-    { nome: 'Cachoeirinha', x: 1700, y: 180 },
-    { nome: 'Gravataí', x: 2600, y: 400 },
-    { nome: 'Alvorada', x: 2420, y: 1290 },
-    { nome: 'Viamão', x: 2950, y: 1980 },
-  ];
+  /* Os rótulos de bairro do mapa desenhado saem dos PRÓPRIOS DADOS.
+
+     Antes eram uma lista à parte, com coordenadas cravadas no plano. Quando as
+     terapeutas ganharam coordenada real, a lista ficou apontando para o lugar
+     errado — e como é só decoração, ninguém teria percebido. Derivar da fonte
+     única resolve isso de uma vez: mudou a terapeuta de bairro, o rótulo segue. */
+  function bairrosDoMapa() {
+    const vistos = new Map();
+    const por = (nome, lat, lng) => { if (nome && !vistos.has(nome)) vistos.set(nome, { nome, lat, lng }); };
+    por(Dados.EU.bairro, Dados.EU.lat, Dados.EU.lng);
+    Dados.TERAPEUTAS.forEach((t) => {
+      // Em cidade da região metropolitana o nome útil é o da CIDADE, não o do
+      // bairro: "Vila Betânia" não localiza ninguém; "Cachoeirinha", sim.
+      const nome = t.cidade === Dados.EU.cidade ? t.bairro : t.cidade;
+      por(nome, t.lat, t.lng);
+    });
+    return Array.from(vistos.values());
+  }
 
   /* ------------------------------------------------------ desenho do mapa */
   // `sufixo` existe porque a mesma malha aparece em vários lugares ao mesmo
@@ -1670,9 +1761,10 @@ const Mapa = (() => {
   }
 
   function rotulos() {
-    return BAIRROS.map((b) =>
-      `<span class="mapa__rotulo" style="left:${b.x}px;top:${b.y}px">${b.nome}</span>`
-    ).join('');
+    return bairrosDoMapa().map((b) => {
+      const p = Dados.paraPlano(b.lat, b.lng);
+      return `<span class="mapa__rotulo" style="left:${Math.round(p.x)}px;top:${Math.round(p.y) - 34}px">${b.nome}</span>`;
+    }).join('');
   }
 
   /* ------------------------------------------------------------ gestos */
@@ -1680,6 +1772,10 @@ const Mapa = (() => {
   // cuja graça é ver QUEM ESTÁ NA REGIÃO. Em z=0,45 a tela cobre ~7 km, que é
   // a distância que alguém aceita percorrer para uma sessão.
   const ZOOM_MIN = 0.28, ZOOM_MAX = 2.0, ZOOM_INICIAL = 0.45;
+
+  /* Níveis semânticos, os mesmos nomes do mapa real. O app fala em "região" e
+     "pessoa"; cada motor traduz para a sua escala — aqui 0,28–2,0, lá 0–22. */
+  const NIVEL = { regiao: 0.45, pessoa: 0.62 };
 
   function montar(el, op = {}) {
     const mundo = el.querySelector('.mapa__mundo');
@@ -1717,8 +1813,8 @@ const Mapa = (() => {
     /* Onde, na tela, está um ponto do mundo? Serve para o card apontar o pin. */
     function paraTela(x, y) { return { x: x * z + tx, y: y * z + ty }; }
 
-    /* Coloca um ponto do mundo no centro da área visível (descontando a folha) */
-    function centralizar(x, y, zAlvo = z, animado = true) {
+    /* Coloca um ponto do PLANO no centro da área visível (descontando a folha) */
+    function centralizarPlano(x, y, zAlvo = z, animado = true) {
       const { w, h } = tela();
       const zz = Fisica.limitar(zAlvo, ZOOM_MIN, ZOOM_MAX);
       const alvoX = w / 2 - x * zz;
@@ -1732,6 +1828,24 @@ const Mapa = (() => {
         return;
       }
       molaX.para(fx); molaY.para(fy); molaZ.para(zz);
+    }
+
+    /* A interface que o app usa é a MESMA do mapa real: coordenada de verdade e
+       nível com nome. Quem converte para o plano é este motor, aqui dentro. */
+    function centralizar(lat, lng, nivel = 'regiao', animado = true) {
+      const p = Dados.paraPlano(lat, lng);
+      centralizarPlano(p.x, p.y, Math.max(z, NIVEL[nivel] || NIVEL.regiao), animado);
+    }
+
+    /* Os pinos do mapa desenhado vivem dentro do mundo; refazer o bloco inteiro
+       é barato porque são 12 elementos, e mantém filtro e horário em dia. */
+    function atualizarPins() {
+      const caixa = el.querySelector('#pins');
+      if (caixa) caixa.innerHTML = Telas.pinsHTML();
+    }
+
+    function selecionar(id) {
+      el.querySelectorAll('.pin').forEach((p) => { p.dataset.sel = (p.dataset.id === id ? '1' : '0'); });
     }
 
     function definirOffsetBaixo(v) { offsetBaixo = v; }
@@ -1918,10 +2032,211 @@ const Mapa = (() => {
       ampliarNoPonto(el.getBoundingClientRect().left + w / 2, el.getBoundingClientRect().top + offsetTopo + (h - offsetTopo - offsetBaixo) / 2, fator);
     }
 
-    return { centralizar, paraTela, definirOffsetBaixo, definirOffsetTopo, ajustarZoom, pintar, get zoom() { return z; } };
+    return { motor: 'desenhado', centralizar, centralizarPlano, paraTela, atualizarPins, selecionar,
+             definirOffsetBaixo, definirOffsetTopo, ajustarZoom, pintar, destruir() {},
+             get zoom() { return z; } };
   }
 
-  return { gerarSVG, rotulos, montar, BAIRROS, ZOOM_INICIAL };
+  return { gerarSVG, rotulos, montar, bairrosDoMapa, ZOOM_INICIAL, NIVEL };
+})();
+
+
+/* ==========================================================================
+   04b-mapa-real.js
+   ========================================================================== */
+/* ============================================================================
+   04b-mapa-real.js — o mapa de ruas de verdade (MapLibre + OpenFreeMap)
+
+   POR QUE EXISTEM DOIS MAPAS
+   --------------------------
+   O `04-mapa.js` desenha um traçado urbano por código: funciona offline, não
+   depende de ninguém e foi o que permitiu a Fase 0 existir. Mas ele não mostra
+   a RUA da pessoa — e é exatamente isso que faz uma terapeuta olhar a tela e
+   dizer "esse é o meu quarteirão".
+
+   Este arquivo é o mapa real. Os dois têm a MESMA FORMA (`montar()` devolve o
+   mesmo conjunto de funções), então o `06-app.js` usa um ou outro sem saber
+   qual. Se o MapLibre não carregar — sem internet, CDN fora do ar, navegador
+   antigo — o app cai no mapa desenhado e continua inteiro.
+
+   POR QUE OpenFreeMap, E NÃO OS TILES DO PRÓPRIO OSM
+   --------------------------------------------------
+   A política de uso do openstreetmap.org proíbe consumo em escala de aplicação:
+   os servidores deles vivem de doação e são para o mapa deles, não para o nosso.
+   O OpenFreeMap serve os mesmos dados sem chave, sem cadastro e sem limite.
+
+   ⚠️ A ATRIBUIÇÃO É OBRIGAÇÃO, NÃO ENFEITE — e é o crédito ao OpenStreetMap
+   que aparece recolhido no (i) do canto. Ele vem do TileJSON que o estilo
+   carrega; não se apaga nem se some com ele.
+   ========================================================================= */
+const MapaReal = (() => {
+
+  // `positron` é o estilo claro e dessaturado — é o que o arquivo 05 do briefing
+  // pede: "mapa em tom claro e dessaturado, para os pins violeta saltarem".
+  const ESTILO = 'https://tiles.openfreemap.org/styles/positron';
+
+  /* ⚠️ O crédito NÃO é escrito aqui, e isso foi corrigido depois de ver a tela:
+     o JSON do estilo vem com `attribution` nulo, mas o TileJSON que ele carrega
+     em seguida TRAZ o crédito — e o MapLibre o mostra sozinho. Escrever o meu
+     por cima resultava em "OpenFreeMap · OpenStreetMap | OpenFreeMap ©
+     OpenMapTiles from OpenStreetMap", duas vezes a mesma coisa, ocupando meia
+     tela de celular.
+
+     Ler o JSON do estilo não bastava para saber disso. Foi preciso olhar. */
+
+  /* Níveis semânticos, não números soltos. O mapa desenhado e o real usam
+     escalas completamente diferentes (0,28–2,4 contra 0–22); o app fala em
+     "região" e "pessoa" e cada motor traduz para a sua. */
+  const NIVEL = { regiao: 12.1, pessoa: 14.6 };
+
+  const disponivel = () => typeof maplibregl !== 'undefined';
+
+  function montar(el, op = {}) {
+    let offsetTopo = op.offsetTopo || 0;
+    let offsetBaixo = op.offsetBaixo || 0;
+
+    const mapa = new maplibregl.Map({
+      container: el,
+      style: ESTILO,
+      center: [Dados.EU.lng, Dados.EU.lat],
+      zoom: NIVEL.regiao,
+      attributionControl: false,       // a nossa entra abaixo, com o crédito certo
+      dragRotate: false,               // girar o mapa desorienta e não serve a nada aqui
+      pitchWithRotate: false,
+      touchPitch: false,
+      maxZoom: 18,
+      minZoom: 9,
+    });
+
+    mapa.touchZoomRotate.disableRotation();
+    // `compact` deixa o crédito recolhido num (i) — ele continua a um toque de
+    // distância, como a licença exige, sem comer a tela.
+    mapa.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+
+    /* ------------------------------------------------------------- pinos */
+    const marcadores = new Map();   // id -> maplibregl.Marker
+
+    function criarPino(t) {
+      const caixa = document.createElement('div');
+      caixa.innerHTML = Telas.pinoHTML(t);
+      const el2 = caixa.firstElementChild;
+      // O pino do mapa real não contra-escala: o MapLibre já mantém o marcador
+      // do mesmo tamanho em qualquer zoom.
+      el2.style.setProperty('--z', '1');
+      el2.style.position = 'relative';
+      el2.style.margin = '0';
+      el2.addEventListener('click', (e) => {
+        e.stopPropagation();           // senão o toque também conta como "fundo"
+        if (op.aoTocarPin) op.aoTocarPin(t.id);
+      });
+      return el2;
+    }
+
+    function montarPinos() {
+      Dados.TERAPEUTAS.filter((t) => t.ativa).forEach((t) => {
+        const el2 = criarPino(t);
+        const m = new maplibregl.Marker({ element: el2, anchor: 'bottom' })
+          .setLngLat([t.lng, t.lat])
+          .addTo(mapa);
+        marcadores.set(t.id, { marcador: m, el: el2 });
+      });
+
+      // "você está aqui"
+      const eu = document.createElement('div');
+      eu.className = 'eu';
+      eu.style.setProperty('--z', '1');
+      eu.style.position = 'relative';
+      eu.style.margin = '0';
+      eu.innerHTML = '<div class="eu__halo"></div><div class="eu__nucleo"></div>';
+      new maplibregl.Marker({ element: eu, anchor: 'center' })
+        .setLngLat([Dados.EU.lng, Dados.EU.lat])
+        .addTo(mapa);
+    }
+
+    /* O filtro não destrói e recria marcador: só apaga o que saiu da busca.
+       Recriar faria os 12 pinos piscarem a cada tecla digitada na busca. */
+    function atualizarPins() {
+      const visiveis = new Set(Dados.listar().map((t) => t.id));
+      for (const [id, m] of marcadores) {
+        const dentro = visiveis.has(id);
+        m.el.style.opacity = dentro ? '' : '0.22';
+        m.el.style.pointerEvents = dentro ? '' : 'none';
+        const t = Dados.porId(id);
+        m.el.classList.toggle('pin--fechada', !Dados.estaAberta(t));
+      }
+    }
+
+    function selecionar(id) {
+      for (const [outro, m] of marcadores) m.el.dataset.sel = (outro === id ? '1' : '0');
+    }
+
+    /* ---------------------------------------------------------- câmera */
+    function centralizar(lat, lng, nivel = 'regiao', animado = true) {
+      const opcoes = {
+        center: [lng, lat],
+        zoom: Math.max(mapa.getZoom(), NIVEL[nivel] || NIVEL.regiao),
+        // O `padding` é o que impede o pino de parar embaixo da folha ou atrás
+        // dos chips: o MapLibre centraliza na área ÚTIL, não na tela inteira.
+        padding: { top: offsetTopo, bottom: offsetBaixo, left: 0, right: 0 },
+      };
+      if (!animado || Fisica.menosMovimento()) mapa.jumpTo(opcoes);
+      else mapa.easeTo({ ...opcoes, duration: 650, easing: (t) => 1 - Math.pow(1 - t, 3) });
+    }
+
+    mapa.on('click', () => { if (op.aoTocarFundo) op.aoTocarFundo(); });
+    mapa.on('load', () => { montarPinos(); atualizarPins(); if (op.aoCarregar) op.aoCarregar(); });
+
+    // ⚠️ O contêiner nasce com tamanho zero enquanto a aba está sendo montada.
+    // Sem este `resize` o mapa fica um quadrado cinza e nada acusa o motivo.
+    setTimeout(() => mapa.resize(), 60);
+
+    return {
+      motor: 'real',
+      centralizar,
+      atualizarPins,
+      selecionar,
+      definirOffsetBaixo: (v) => { offsetBaixo = v; },
+      definirOffsetTopo: (v) => { offsetTopo = v; },
+      ajustarZoom: (fator) => mapa.easeTo({ zoom: mapa.getZoom() + (fator > 1 ? 1 : -1) }),
+      destruir: () => { try { mapa.remove(); } catch (_) {} },
+      get zoom() { return mapa.getZoom(); },
+      get bruto() { return mapa; },
+    };
+  }
+
+  /* ------------------------------------------------- mini-mapa (perfil) */
+  /* Um quadro pequeno, sem controle e sem interação, mostrando onde a pessoa
+     atende. Se `arrastavel`, vira o passo do endereço do assistente: aí ela
+     move o mapa e o pino do centro marca o ponto. */
+  function montarMini(el, lat, lng, op = {}) {
+    const mapa = new maplibregl.Map({
+      container: el,
+      style: ESTILO,
+      center: [lng, lat],
+      zoom: op.arrastavel ? 15 : 15.5,
+      attributionControl: false,
+      interactive: !!op.arrastavel,
+      dragRotate: false,
+    });
+    mapa.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+
+    if (!op.arrastavel) {
+      const pino = document.createElement('div');
+      pino.innerHTML = Telas.pinoSimplesHTML();
+      new maplibregl.Marker({ element: pino.firstElementChild, anchor: 'bottom' })
+        .setLngLat([lng, lat]).addTo(mapa);
+    } else if (op.aoMover) {
+      // No modo arrastável o pino fica FIXO no centro da moldura (desenhado por
+      // cima pelo HTML) e quem se move é o mapa — é assim que todo aplicativo
+      // faz, porque acertar um alvo parado é mais fácil que arrastar um alvo.
+      mapa.on('moveend', () => { const c = mapa.getCenter(); op.aoMover(c.lat, c.lng); });
+    }
+
+    setTimeout(() => mapa.resize(), 60);
+    return mapa;
+  }
+
+  return { disponivel, montar, montarMini, ESTILO, NIVEL };
 })();
 
 
@@ -2270,7 +2585,7 @@ const Telas = (() => {
   /* --- aba mapa ---------------------------------------------------------- */
   function abaMapa() {
     return `
-      <div class="mapa" id="mapa">
+      <div class="mapa" id="mapa">${MapaReal.disponivel() ? '' : `
         <div class="mapa__mundo" id="mundo" style="--z:1;width:${Dados.MUNDO.largura}px;height:${Dados.MUNDO.altura}px">
           ${Mapa.gerarSVG()}
           ${Mapa.rotulos()}
@@ -2278,7 +2593,7 @@ const Telas = (() => {
           <div class="eu" style="left:${Dados.EU.x}px;top:${Dados.EU.y}px">
             <div class="eu__halo"></div><div class="eu__nucleo"></div>
           </div>
-        </div>
+        </div>`}
       </div>
       <div class="mapa__topo">
         ${barraBusca()}
@@ -2294,24 +2609,43 @@ const Telas = (() => {
       </div>`;
   }
 
+  /* O DESENHO do pino, um só, usado pelos dois mapas.
+     O desenhado posiciona por `left/top` no plano; o real entrega o mesmo
+     elemento a um marcador do MapLibre, que cuida da posição. Se cada um
+     tivesse o seu, o mapa mudaria de cara ao trocar de motor. */
+  function pinoHTML(t, op = {}) {
+    const aberta = Dados.estaAberta(t);
+    const estilo = (op.posicionar ? `left:${t.x}px;top:${t.y}px;` : '')
+                 + (op.fora ? 'opacity:.22;pointer-events:none' : '');
+    return `<button class="pin ${aberta ? '' : 'pin--fechada'}" data-id="${t.id}" data-sel="0"
+      style="${estilo}" aria-label="${esc(t.nome)}, nota ${t.nota}">
+      <span class="pin__anel"></span>
+      <svg class="pin__corpo" viewBox="0 0 46 56" width="46" height="56" aria-hidden="true">
+        <path class="pin__forma" d="M23 55C23 55 43 36.5 43 21.5 43 10.2 34.05 1 23 1S3 10.2 3 21.5C3 36.5 23 55 23 55Z" fill="var(--violeta)"/>
+        <circle cx="23" cy="21" r="12.5" fill="#fff"/>
+        <text x="23" y="21.6" text-anchor="middle" dominant-baseline="central"
+              font-family="Nunito Sans, sans-serif" font-size="12" font-weight="900"
+              fill="var(--violeta-escuro)" letter-spacing="-0.4">${t.nota.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</text>
+      </svg>
+    </button>`;
+  }
+
+  /* Pino sem nota, para o mini-mapa do endereço */
+  function pinoSimplesHTML() {
+    return `<div style="width:34px;height:41px;filter:drop-shadow(0 3px 6px rgba(43,33,64,.3))">
+      <svg viewBox="0 0 46 56" width="34" height="41" aria-hidden="true">
+        <path d="M23 55C23 55 43 36.5 43 21.5 43 10.2 34.05 1 23 1S3 10.2 3 21.5C3 36.5 23 55 23 55Z" fill="var(--violeta)"/>
+        <circle cx="23" cy="21" r="9" fill="#fff"/>
+      </svg>
+    </div>`;
+  }
+
+  /* Só o mapa DESENHADO usa esta: ele pinta os 12 de uma vez dentro do mundo. */
   function pinsHTML() {
     const visiveis = new Set(Dados.listar().map((t) => t.id));
-    return Dados.TERAPEUTAS.filter((t) => t.ativa).map((t) => {
-      const aberta = Dados.estaAberta(t);
-      const fora = !visiveis.has(t.id);
-      return `<button class="pin ${aberta ? '' : 'pin--fechada'}" data-id="${t.id}" data-sel="0"
-        style="left:${t.x}px;top:${t.y}px;${fora ? 'opacity:.22;pointer-events:none' : ''}"
-        aria-label="${esc(t.nome)}, nota ${t.nota}">
-        <span class="pin__anel"></span>
-        <svg class="pin__corpo" viewBox="0 0 46 56" width="46" height="56" aria-hidden="true">
-          <path class="pin__forma" d="M23 55C23 55 43 36.5 43 21.5 43 10.2 34.05 1 23 1S3 10.2 3 21.5C3 36.5 23 55 23 55Z" fill="var(--violeta)"/>
-          <circle cx="23" cy="21" r="12.5" fill="#fff"/>
-          <text x="23" y="21.6" text-anchor="middle" dominant-baseline="central"
-                font-family="Nunito Sans, sans-serif" font-size="12" font-weight="900"
-                fill="var(--violeta-escuro)" letter-spacing="-0.4">${t.nota.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}</text>
-        </svg>
-      </button>`;
-    }).join('');
+    return Dados.TERAPEUTAS.filter((t) => t.ativa)
+      .map((t) => pinoHTML(t, { posicionar: true, fora: !visiveis.has(t.id) }))
+      .join('');
   }
 
   function barraBusca() {
@@ -2455,7 +2789,7 @@ const Telas = (() => {
         <section class="secao">
           <div class="secao__titulo"><h2 class="d3">Onde ela atende</h2></div>
           <div class="cartao" style="padding:0;overflow:hidden">
-            <div class="minimapa" data-x="${t.x}" data-y="${t.y}" style="height:160px;position:relative;overflow:hidden;background:var(--mapa-solo)"></div>
+            <div class="minimapa" data-x="${t.x}" data-y="${t.y}" data-lat="${t.lat}" data-lng="${t.lng}" style="height:160px;position:relative;overflow:hidden;background:var(--mapa-solo)"></div>
             <div style="padding:14px">
               <p class="t2">${esc(t.endereco)}</p>
               <p class="pequeno dim mt4">${esc(t.bairro)}, ${esc(t.cidade)} — ${t.uf}</p>
@@ -2786,7 +3120,7 @@ const Telas = (() => {
         </label>
       </div>
       <div class="cartao" style="padding:0;overflow:hidden">
-        <div class="minimapa" id="mapaEndereco" data-arrastavel="1" data-x="${P.x}" data-y="${P.y}" style="height:210px;position:relative;overflow:hidden;background:var(--mapa-solo)"></div>
+        <div class="minimapa" id="mapaEndereco" data-arrastavel="1" data-x="${P.x}" data-y="${P.y}" data-lat="${P.lat}" data-lng="${P.lng}" style="height:210px;position:relative;overflow:hidden;background:var(--mapa-solo)"></div>
         <div style="padding:12px 14px">
           <p class="pequeno dim">${ic('info', 14)} Arraste o mapa para posicionar o pino no ponto certo.</p>
         </div>
@@ -3062,7 +3396,7 @@ const Telas = (() => {
   }
 
   return {
-    esc, ic, svg, ICONES, avatar, estrelas, lotus, cabecalho, cartaoTerapeuta, selo, ondeFica, pinsHTML,
+    esc, ic, svg, ICONES, avatar, estrelas, lotus, cabecalho, cartaoTerapeuta, selo, ondeFica, pinsHTML, pinoHTML, pinoSimplesHTML,
     entrar, telefone, codigo, papel, localizacao, cidades,
     raizCliente, abaMapa, abaLista, abaFavoritas, abaConta, barraAbas,
     folhaResumo, perfil, avaliar, filtros, denunciar, barraBusca, chipsFiltro, vazioBusca,
@@ -3279,7 +3613,12 @@ const App = (() => {
     if (nav) nav.outerHTML = E.papel === 'terapeuta' ? Telas.barraAbasTerapeuta() : Telas.barraAbas();
 
     if (cx.querySelector('#mapa')) montarMapa();
-    else { mapaCtrl = null; folha = null; }
+    else {
+      // O MapLibre segura contexto de GPU e ouvintes: sair da aba sem descartar
+      // deixa um mapa invisível vivo, e outro nasce na volta.
+      if (mapaCtrl && mapaCtrl.destruir) mapaCtrl.destruir();
+      mapaCtrl = null; folha = null;
+    }
     if (E.aba === 'meuPerfil' || E.aba === 'mapa') montarMinimapas(cx);
 
     // Status bar clara sobre a capa violeta não existe aqui; mantém escura
@@ -3305,26 +3644,33 @@ const App = (() => {
     if (!el) return;
     folha = document.getElementById('folha');
 
-    mapaCtrl = Mapa.montar(el, {
-      zoom: Mapa.ZOOM_INICIAL,
+    /* Dois motores, a mesma forma. O real mostra a RUA da pessoa — é o que faz
+       uma terapeuta reconhecer o próprio quarteirão. O desenhado é o plano B
+       honesto: sem internet, com o CDN fora do ar ou em navegador antigo, o app
+       continua inteiro em vez de mostrar um retângulo cinza. */
+    const opcoes = {
       offsetBaixo: 96,
       offsetTopo: alturaTopoMapa(),
       aoTocarPin: (id) => selecionarPin(id),
       aoTocarFundo: () => fecharFolha(),
-    });
-    mapaCtrl.centralizar(Dados.EU.x, Dados.EU.y, Mapa.ZOOM_INICIAL, false);
+    };
+    mapaCtrl = MapaReal.disponivel()
+      ? MapaReal.montar(el, opcoes)
+      : Mapa.montar(el, { ...opcoes, zoom: Mapa.ZOOM_INICIAL });
+
+    mapaCtrl.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao', false);
     ligarFolha();
   }
 
   function selecionarPin(id, animar = true) {
     const t = Dados.porId(id);
     if (!t) return;
-    document.querySelectorAll('.pin').forEach((p) => p.dataset.sel = (p.dataset.id === id ? '1' : '0'));
+    if (mapaCtrl) mapaCtrl.selecionar(id);
     abrirFolha(Telas.folhaResumo(t), { tipo: 'resumo', id });
     if (animar && mapaCtrl) {
       // Sobe o ponto para a metade de cima: a folha vai ocupar a de baixo
       mapaCtrl.definirOffsetBaixo(alturaFolha() + 40);
-      mapaCtrl.centralizar(t.x, t.y, Math.max(mapaCtrl.zoom, 0.62));
+      mapaCtrl.centralizar(t.lat, t.lng, 'pessoa');
     }
   }
 
@@ -3368,8 +3714,7 @@ const App = (() => {
 
   function fecharFolha() {
     if (!folha || !folhaAberta) return;
-    document.querySelectorAll('.pin').forEach((p) => p.dataset.sel = '0');
-    if (mapaCtrl) mapaCtrl.definirOffsetBaixo(96);
+    if (mapaCtrl) { mapaCtrl.selecionar(null); mapaCtrl.definirOffsetBaixo(96); }
     if (Fisica.menosMovimento()) { molaFolha.fixa(alturaAtual); folha.hidden = true; folhaAberta = false; return; }
     molaFolha.para(alturaAtual, { amortecimento: 1, resposta: 0.3 });
   }
@@ -3442,8 +3787,7 @@ const App = (() => {
       }
       const destino = Fisica.encaixeMaisProximo([0, alturaAtual], projetado);
       if (destino === alturaAtual) {
-        document.querySelectorAll('.pin').forEach((p) => p.dataset.sel = '0');
-        if (mapaCtrl) mapaCtrl.definirOffsetBaixo(96);
+        if (mapaCtrl) { mapaCtrl.selecionar(null); mapaCtrl.definirOffsetBaixo(96); }
       }
       molaFolha.para(destino, { velocidade: v, amortecimento: destino === 0 ? 0.82 : 1, resposta: 0.3 });
     };
@@ -3458,6 +3802,33 @@ const App = (() => {
       if (cx.dataset.pronto) return;
       cx.dataset.pronto = '1';
       const x = Number(cx.dataset.x), y = Number(cx.dataset.y);
+      const lat = Number(cx.dataset.lat), lng = Number(cx.dataset.lng);
+
+      /* Com mapa real disponível, o mini-mapa também é real — senão o perfil
+         mostraria uma rua desenhada enquanto a tela anterior mostrava a rua de
+         verdade, e a diferença faria a pessoa duvidar das duas. */
+      if (MapaReal.disponivel() && Number.isFinite(lat) && Number.isFinite(lng)) {
+        if (cx.dataset.arrastavel) {
+          // Pino FIXO no centro, mapa se movendo por baixo: acertar um alvo
+          // parado é mais fácil que arrastar um alvo.
+          const mira = document.createElement('div');
+          mira.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:3;pointer-events:none';
+          mira.innerHTML = Telas.pinoSimplesHTML();
+          cx.appendChild(mira);
+          MapaReal.montarMini(cx, lat, lng, {
+            arrastavel: true,
+            aoMover: (la, ln) => {
+              E.perfil.lat = la; E.perfil.lng = ln;
+              const plano = Dados.paraPlano(la, ln);      // o desenhado precisa do plano
+              E.perfil.x = plano.x; E.perfil.y = plano.y;
+            },
+          });
+        } else {
+          MapaReal.montarMini(cx, lat, lng);
+        }
+        return;
+      }
+
       const z = 1.5;
       const w = cx.clientWidth || 340, h = cx.clientHeight || 160;
       const sufixo = 'm' + Math.random().toString(36).slice(2, 7);
@@ -3577,8 +3948,7 @@ const App = (() => {
   }
 
   function atualizarMapa() {
-    const pins = document.getElementById('pins');
-    if (pins) pins.innerHTML = Telas.pinsHTML();
+    if (mapaCtrl && mapaCtrl.atualizarPins) mapaCtrl.atualizarPins();
     const chips = document.getElementById('chips');
     if (chips) chips.outerHTML = Telas.chipsFiltro();
     const conta = document.getElementById('contaFiltro');
@@ -3728,7 +4098,7 @@ const App = (() => {
       case 'modoLista': E.modo = 'lista'; renderAba(); break;
       case 'modoMapa': E.modo = 'mapa'; renderAba(); break;
       case 'recentrar':
-        if (mapaCtrl) mapaCtrl.centralizar(Dados.EU.x, Dados.EU.y, Mapa.ZOOM_INICIAL);
+        if (mapaCtrl) mapaCtrl.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao');
         break;
 
       /* --- cliente --- */

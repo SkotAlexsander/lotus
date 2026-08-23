@@ -1,8 +1,18 @@
 <title>Mapa Holístico</title>
 
-<!-- Nenhuma requisição externa: as fontes estão embutidas no <style> abaixo
-     (ferramentas/embutir_fontes.js). Dentro do APK isto é o que garante que o
-     app tenha a mesma cara com e sem internet. -->
+<!-- As FONTES estão embutidas no <style> abaixo (ferramentas/embutir_fontes.js):
+     nada de tipografia depende da rede.
+
+     O MapLibre é a única coisa que vem de fora, e é opcional de propósito:
+     ele desenha o mapa de RUAS DE VERDADE. Se não carregar — sem internet, CDN
+     fora do ar, navegador antigo — o app cai no mapa desenhado por código e
+     continua inteiro. É por isso que ele entra com `defer` e ninguém espera
+     por ele.
+
+     ⚠️ Versão FIXA. Apontar para a mais nova faz o app quebrar sozinho no dia
+     em que a biblioteca mudar, sem ninguém ter tocado em nada aqui. -->
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css">
+<script defer src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
 
 <style>
 /* <<<CSS>>> */

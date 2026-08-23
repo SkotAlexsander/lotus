@@ -202,7 +202,12 @@ const App = (() => {
     if (nav) nav.outerHTML = E.papel === 'terapeuta' ? Telas.barraAbasTerapeuta() : Telas.barraAbas();
 
     if (cx.querySelector('#mapa')) montarMapa();
-    else { mapaCtrl = null; folha = null; }
+    else {
+      // O MapLibre segura contexto de GPU e ouvintes: sair da aba sem descartar
+      // deixa um mapa invisível vivo, e outro nasce na volta.
+      if (mapaCtrl && mapaCtrl.destruir) mapaCtrl.destruir();
+      mapaCtrl = null; folha = null;
+    }
     if (E.aba === 'meuPerfil' || E.aba === 'mapa') montarMinimapas(cx);
 
     // Status bar clara sobre a capa violeta não existe aqui; mantém escura
@@ -228,26 +233,33 @@ const App = (() => {
     if (!el) return;
     folha = document.getElementById('folha');
 
-    mapaCtrl = Mapa.montar(el, {
-      zoom: Mapa.ZOOM_INICIAL,
+    /* Dois motores, a mesma forma. O real mostra a RUA da pessoa — é o que faz
+       uma terapeuta reconhecer o próprio quarteirão. O desenhado é o plano B
+       honesto: sem internet, com o CDN fora do ar ou em navegador antigo, o app
+       continua inteiro em vez de mostrar um retângulo cinza. */
+    const opcoes = {
       offsetBaixo: 96,
       offsetTopo: alturaTopoMapa(),
       aoTocarPin: (id) => selecionarPin(id),
       aoTocarFundo: () => fecharFolha(),
-    });
-    mapaCtrl.centralizar(Dados.EU.x, Dados.EU.y, Mapa.ZOOM_INICIAL, false);
+    };
+    mapaCtrl = MapaReal.disponivel()
+      ? MapaReal.montar(el, opcoes)
+      : Mapa.montar(el, { ...opcoes, zoom: Mapa.ZOOM_INICIAL });
+
+    mapaCtrl.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao', false);
     ligarFolha();
   }
 
   function selecionarPin(id, animar = true) {
     const t = Dados.porId(id);
     if (!t) return;
-    document.querySelectorAll('.pin').forEach((p) => p.dataset.sel = (p.dataset.id === id ? '1' : '0'));
+    if (mapaCtrl) mapaCtrl.selecionar(id);
     abrirFolha(Telas.folhaResumo(t), { tipo: 'resumo', id });
     if (animar && mapaCtrl) {
       // Sobe o ponto para a metade de cima: a folha vai ocupar a de baixo
       mapaCtrl.definirOffsetBaixo(alturaFolha() + 40);
-      mapaCtrl.centralizar(t.x, t.y, Math.max(mapaCtrl.zoom, 0.62));
+      mapaCtrl.centralizar(t.lat, t.lng, 'pessoa');
     }
   }
 
@@ -291,8 +303,7 @@ const App = (() => {
 
   function fecharFolha() {
     if (!folha || !folhaAberta) return;
-    document.querySelectorAll('.pin').forEach((p) => p.dataset.sel = '0');
-    if (mapaCtrl) mapaCtrl.definirOffsetBaixo(96);
+    if (mapaCtrl) { mapaCtrl.selecionar(null); mapaCtrl.definirOffsetBaixo(96); }
     if (Fisica.menosMovimento()) { molaFolha.fixa(alturaAtual); folha.hidden = true; folhaAberta = false; return; }
     molaFolha.para(alturaAtual, { amortecimento: 1, resposta: 0.3 });
   }
@@ -365,8 +376,7 @@ const App = (() => {
       }
       const destino = Fisica.encaixeMaisProximo([0, alturaAtual], projetado);
       if (destino === alturaAtual) {
-        document.querySelectorAll('.pin').forEach((p) => p.dataset.sel = '0');
-        if (mapaCtrl) mapaCtrl.definirOffsetBaixo(96);
+        if (mapaCtrl) { mapaCtrl.selecionar(null); mapaCtrl.definirOffsetBaixo(96); }
       }
       molaFolha.para(destino, { velocidade: v, amortecimento: destino === 0 ? 0.82 : 1, resposta: 0.3 });
     };
@@ -381,6 +391,33 @@ const App = (() => {
       if (cx.dataset.pronto) return;
       cx.dataset.pronto = '1';
       const x = Number(cx.dataset.x), y = Number(cx.dataset.y);
+      const lat = Number(cx.dataset.lat), lng = Number(cx.dataset.lng);
+
+      /* Com mapa real disponível, o mini-mapa também é real — senão o perfil
+         mostraria uma rua desenhada enquanto a tela anterior mostrava a rua de
+         verdade, e a diferença faria a pessoa duvidar das duas. */
+      if (MapaReal.disponivel() && Number.isFinite(lat) && Number.isFinite(lng)) {
+        if (cx.dataset.arrastavel) {
+          // Pino FIXO no centro, mapa se movendo por baixo: acertar um alvo
+          // parado é mais fácil que arrastar um alvo.
+          const mira = document.createElement('div');
+          mira.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:3;pointer-events:none';
+          mira.innerHTML = Telas.pinoSimplesHTML();
+          cx.appendChild(mira);
+          MapaReal.montarMini(cx, lat, lng, {
+            arrastavel: true,
+            aoMover: (la, ln) => {
+              E.perfil.lat = la; E.perfil.lng = ln;
+              const plano = Dados.paraPlano(la, ln);      // o desenhado precisa do plano
+              E.perfil.x = plano.x; E.perfil.y = plano.y;
+            },
+          });
+        } else {
+          MapaReal.montarMini(cx, lat, lng);
+        }
+        return;
+      }
+
       const z = 1.5;
       const w = cx.clientWidth || 340, h = cx.clientHeight || 160;
       const sufixo = 'm' + Math.random().toString(36).slice(2, 7);
@@ -500,8 +537,7 @@ const App = (() => {
   }
 
   function atualizarMapa() {
-    const pins = document.getElementById('pins');
-    if (pins) pins.innerHTML = Telas.pinsHTML();
+    if (mapaCtrl && mapaCtrl.atualizarPins) mapaCtrl.atualizarPins();
     const chips = document.getElementById('chips');
     if (chips) chips.outerHTML = Telas.chipsFiltro();
     const conta = document.getElementById('contaFiltro');
@@ -651,7 +687,7 @@ const App = (() => {
       case 'modoLista': E.modo = 'lista'; renderAba(); break;
       case 'modoMapa': E.modo = 'mapa'; renderAba(); break;
       case 'recentrar':
-        if (mapaCtrl) mapaCtrl.centralizar(Dados.EU.x, Dados.EU.y, Mapa.ZOOM_INICIAL);
+        if (mapaCtrl) mapaCtrl.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao');
         break;
 
       /* --- cliente --- */

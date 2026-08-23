@@ -35,26 +35,13 @@ function carregarDados() {
 }
 
 /* --------------------------------------------------------- coordenadas reais
-   O protótipo trabalha num plano cartesiano (120 px = 1 km) com a usuária no
-   centro. O banco precisa de latitude e longitude de verdade, porque a busca é
-   PostGIS.
+   A conversão do plano do protótipo para latitude/longitude vive em
+   `src/03-dados.js` e é feita UMA vez. Este gerador só LÊ `t.lat` e `t.lng`.
 
-   ⚠️ As coordenadas geradas preservam as DISTÂNCIAS e as direções do protótipo,
-   ancoradas em Higienópolis (Porto Alegre). Elas NÃO são os endereços reais dos
-   bairros citados — as pessoas são fictícias e os endereços também. Servem para
-   exercitar a consulta geográfica com dados plausíveis, não para navegar. */
-const ANCORA = { lat: -30.0175, lng: -51.2010 };   // Higienópolis, POA
-const KM_POR_GRAU_LAT = 111.32;
-const KM_POR_GRAU_LNG = KM_POR_GRAU_LAT * Math.cos((ANCORA.lat * Math.PI) / 180);
-
-function paraLatLng(x, y, EU, pxPorKm) {
-  const dxKm = (x - EU.x) / pxPorKm;
-  const dyKm = (y - EU.y) / pxPorKm;          // y cresce para o SUL
-  return {
-    lat: +(ANCORA.lat - dyKm / KM_POR_GRAU_LAT).toFixed(6),
-    lng: +(ANCORA.lng + dxKm / KM_POR_GRAU_LNG).toFixed(6),
-  };
-}
+   Antes ela era refeita aqui, com a mesma fórmula copiada — duas contas
+   independentes para o mesmo número. Enquanto as duas concordassem, ninguém
+   veria; no dia em que uma mudasse, o pino cairia num lugar no app e noutro no
+   banco, e a diferença só apareceria comparando os dois lado a lado. */
 
 /* ------------------------------------------------------- UUID determinístico
    Mesma entrada, mesmo UUID, sempre. É isso que permite rodar a semente de novo
@@ -142,7 +129,7 @@ begin;
 
   D.TERAPEUTAS.forEach((t, n) => {
     const id = uuidDe('terapeuta:' + t.id);
-    const { lat, lng } = paraLatLng(t.x, t.y, D.EU, D.MUNDO.pxPorKm);
+    const { lat, lng } = t;   // vem de src/03-dados.js, não recalculado aqui
 
     p(`
 -- ${n + 1}. ${t.nome} — ${t.bairro}, ${t.cidade} (${t.distanciaKm} km)`);
@@ -211,7 +198,7 @@ order by pr.nome;
 -- A busca principal, do jeito que o app vai chamar (a partir de Higienópolis).
 select nome, bairro, cidade, round(distancia_m::numeric/1000, 1) as km,
        nota_media, total_avaliacoes, aberta_agora
-from terapeutas_proximas(${ANCORA.lat}, ${ANCORA.lng}, 30000);
+from terapeutas_proximas(${D.EU.lat}, ${D.EU.lng}, 30000);
 `);
 
   fs.writeFileSync(SAIDA, L.join('\n') + '\n', 'utf8');
@@ -219,7 +206,7 @@ from terapeutas_proximas(${ANCORA.lat}, ${ANCORA.lng}, 30000);
   const linhas = L.join('\n').split('\n').length;
   console.log(`  06-semente.sql gerado`);
   console.log(`  ${D.TERAPEUTAS.length} terapeutas · ${autores.size} clientes · ${linhas} linhas`);
-  console.log(`  âncora: ${ANCORA.lat}, ${ANCORA.lng} (Higienópolis, POA)`);
+  console.log(`  âncora: ${D.EU.lat}, ${D.EU.lng} (Higienópolis, POA)`);
 }
 
 gerar();
