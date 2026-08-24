@@ -63,7 +63,7 @@ ficção, nada sai do aparelho e nada fica gravado.
 | Plano B | sem internet ele cai num mapa desenhado por código e continua inteiro |
 | Conquistas | 7 selos que marcam a jornada real — no produto, quem concede é o banco, por gatilho |
 | Avisos | notificação nativa na **tela de bloqueio**, com política: silêncio à noite, no máximo 3 por sessão |
-| 93 provas | em navegador real: fluxos, GPS, conquistas, plano B, orçamentos de desempenho, 5 larguras |
+| 101 provas | em navegador real: fluxos (70), GPS (13), conquistas (12), plano B (6) — com orçamentos de desempenho e 5 larguras |
 | Android | APK instalável, provado em emulador — inclusive o aviso no bloqueio |
 | Banco | SQL completo para Supabase + PostGIS: 15 tabelas, RLS em todas, gatilhos que concedem |
 | Documentação | [7 documentos](documentacao/00-INDICE.md) explicando como o código funciona e por quê |
