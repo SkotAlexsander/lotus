@@ -49,6 +49,8 @@ const Telas = (() => {
     cadeado: '<rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8.4 10.5V8a3.6 3.6 0 0 1 7.2 0v2.5"/>',
     servico: '<path d="M6 4.5h12M6 12h12M6 19.5h12"/>',
     casa: '<path d="m4 10.5 8-6.2 8 6.2V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19v-8.5Z"/>',
+    estrela: '<path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9L12 3.6Z"/>',
+    trofeu: '<path d="M8 4h8v6a4 4 0 0 1-8 0V4Z"/><path d="M8 5.5H5.2c0 3 1.2 4.6 2.8 5M16 5.5h2.8c0 3-1.2 4.6-2.8 5"/><path d="M12 14v3M9 20h6M10 17h4"/>',
   };
 
   const ic = (nome, tam = 24, extra = '') => svg(ICONES[nome] || '', tam, extra);
@@ -702,6 +704,34 @@ const Telas = (() => {
       </div>`;
   }
 
+  /* --------------------------------------------------- conquistas */
+  /* A tela mostra TODAS as do papel, feitas e por fazer. Esconder as
+     bloqueadas transformaria o sistema num mistério; mostrá-las é o convite. */
+  function secaoConquistas() {
+    const papel = Dados.estado.papel === 'terapeuta' ? 'terapeuta' : 'cliente';
+    const lista = Conquistas.porPapel(papel);
+    if (!lista.length) return '';
+    const feitas = Conquistas.feitas(papel);
+    return `
+      <h3 class="micro dim mt24 mb8">Conquistas · ${feitas} de ${lista.length}</h3>
+      <div class="cartao" style="padding:10px 16px">
+        ${lista.map((c) => {
+          const tem = Conquistas.tem(c.id);
+          return `
+          <div class="linha" style="padding:10px 0;gap:13px;${tem ? '' : 'opacity:.45'}">
+            <div style="width:42px;height:42px;border-radius:14px;flex:none;display:grid;place-items:center;
+                        background:${tem ? 'var(--dourado-fundo)' : 'var(--linha)'};
+                        color:${tem ? '#8A6C25' : 'var(--texto-3)'}">${ic(c.icone, 21)}</div>
+            <div class="cresce">
+              <p class="t2">${esc(c.nome)}</p>
+              <p class="pequeno dim">${esc(c.descricao)}</p>
+            </div>
+            ${tem ? `<span style="color:var(--sucesso);flex:none">${ic('check', 19)}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+
   /* A tela nunca deve afirmar "você está aqui" sobre um ponto inventado.
      `origem` diz de onde veio, e o texto muda com ela. */
   function localizacaoEmTexto() {
@@ -753,6 +783,8 @@ const Telas = (() => {
           ${linha('usuario', 'Virar terapeuta', 'Montar meu perfil profissional', 'virarTerapeuta')}
           ${linha('info', 'Termos e privacidade', '', 'verTermos')}
         </div>
+
+        ${secaoConquistas()}
 
         <h3 class="micro dim mt24 mb8">Protótipo</h3>
         <div class="cartao">
@@ -1169,6 +1201,8 @@ const Telas = (() => {
           </div>
         </div>
 
+        ${secaoConquistas()}
+
         <div class="cartao cartao--plano mt16">
           <p class="pequeno dim">${ic('info', 14)} No app real esses números vêm de eventos gravados no banco. Aqui são fictícios, só para mostrar o formato.</p>
         </div>
@@ -1178,7 +1212,7 @@ const Telas = (() => {
   return {
     esc, ic, svg, ICONES, avatar, estrelas, lotus, cabecalho, cartaoTerapeuta, selo, ondeFica, pinsHTML, pinoHTML, pinoSimplesHTML,
     entrar, telefone, codigo, papel, localizacao, cidades,
-    raizCliente, abaMapa, abaLista, abaFavoritas, abaConta, barraAbas, localizacaoEmTexto,
+    raizCliente, abaMapa, abaLista, abaFavoritas, abaConta, barraAbas, localizacaoEmTexto, secaoConquistas,
     folhaResumo, perfil, avaliar, filtros, denunciar, barraBusca, chipsFiltro, vazioBusca,
     raizTerapeuta, barraAbasTerapeuta, assistente, passo, abaMeuPerfil, abaAvaliacoesT,
     abaPainel, responder, perfilComoTerapeuta, PASSOS,

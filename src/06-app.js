@@ -251,6 +251,7 @@ const App = (() => {
     mapaCtrl.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao', false);
     ligarFolha();
     if (E.localizacao === 'concedida' && Dados.EU.origem === 'gps') seguirPosicao();
+    Conquistas.registrar('mapa-aberto');
   }
 
   function selecionarPin(id, animar = true) {
@@ -514,11 +515,12 @@ const App = (() => {
   function abrirPerfil(id) {
     fecharFolha();
     abrir('perfil', { id });
+    Conquistas.registrar('perfil-visto', { id });
   }
 
   function alternarFavorito(id) {
     if (E.favoritos.has(id)) { E.favoritos.delete(id); avisar('Removida das favoritas', 'coracao'); }
-    else { E.favoritos.add(id); avisar('Salva nas favoritas', 'coracao'); }
+    else { E.favoritos.add(id); avisar('Salva nas favoritas', 'coracao'); Conquistas.registrar('favoritou'); }
     repintarFavoritos(id);
   }
 
@@ -621,10 +623,32 @@ const App = (() => {
      esquecido, ele consome bateria com o app em outra tela. */
   function seguirPosicao() {
     if (pararDeSeguir) pararDeSeguir();
+
+    /* ⚠️ DESEMPENHO — a lição desta função: `watchPosition` pode pulsar a cada
+       segundo, e a primeira versão re-renderizava a LISTA INTEIRA a cada pulso.
+       Parada num semáforo, com o GPS oscilando 3 m para lá e para cá, a pessoa
+       veria a rolagem saltar e os cartões piscarem — trabalho de tela inteira
+       para uma mudança que não muda nada.
+
+       A régua: só vale recalcular quando o passo MUDA alguma resposta. 25 m
+       não trocam a ordem de ninguém num raio de quilômetros; o ponto azul, esse
+       sim, acompanha cada pulso — mover um marcador custa quase nada. */
+    let ultima = { lat: Dados.EU.lat, lng: Dados.EU.lng };
     pararDeSeguir = Gps.acompanhar((pos) => {
+      const andou = Dados.distanciaEntre(ultima, pos) * 1000;   // em metros
+
+      if (andou < 25) {
+        // Passo pequeno: move o ponto azul e o círculo de precisão, só.
+        Dados.EU.lat = pos.lat; Dados.EU.lng = pos.lng; Dados.EU.precisao = pos.precisao;
+        Object.assign(Dados.EU, Dados.paraPlano(pos.lat, pos.lng));
+        if (mapaCtrl && mapaCtrl.atualizarEu) mapaCtrl.atualizarEu();
+        return;
+      }
+
+      ultima = { lat: pos.lat, lng: pos.lng };
       Dados.definirPosicao({ lat: pos.lat, lng: pos.lng, precisao: pos.precisao, origem: 'gps' });
       if (mapaCtrl && mapaCtrl.atualizarEu) mapaCtrl.atualizarEu();
-      if (E.modo === 'lista') renderAba();     // a lista é ordenada por distância
+      if (E.modo === 'lista') renderAba();     // a ordem pode ter mudado; agora vale
     });
   }
 
@@ -783,6 +807,7 @@ const App = (() => {
         const t = Dados.porId(id);
         avisar(`Abrindo o WhatsApp de ${t.nome.split(' ')[0]}…`, 'zap');
         abrirFora(Dados.linkZap(t));
+        Conquistas.registrar('contato');
         break;
       }
       case 'avaliar': abrir('avaliar', { id }); break;
@@ -803,6 +828,7 @@ const App = (() => {
         if (!nota) return;
         E.minhasAvaliacoes[id] = { nota, texto: texto.trim(), dias: 0 };
         aplicarAvaliacao(id);
+        Conquistas.registrar('avaliou');
         recarregarAbaixo();
         voltar();
         setTimeout(() => avisar('Gratidão por compartilhar! Sua avaliação ajuda outras pessoas a se cuidarem.'), 220);
@@ -902,6 +928,7 @@ const App = (() => {
         if (E.passo === 5) {
           P.visivel = true;
           E.aba = 'meuPerfil';
+          Conquistas.registrar('perfil-publicado');
           trocarRaiz('raizT');
           setTimeout(() => avisar('Perfil publicado! Você já aparece no mapa.', 'check'), 260);
           break;
@@ -955,6 +982,7 @@ const App = (() => {
         const txt = (document.getElementById('campoResposta') || {}).value || '';
         if (!txt.trim()) { avisar('Escreva a sua resposta.', 'info'); break; }
         E.avaliacoesRecebidas[Number(el.dataset.i)].resposta = txt.trim();
+        Conquistas.registrar('respondeu');
         voltar();
         setTimeout(() => { renderAba(); avisar('Resposta publicada'); }, 220);
         break;
@@ -1121,6 +1149,16 @@ const App = (() => {
 
   function iniciar() {
     prepararCabeca();
+
+    /* A conquista aparece na TELA sempre. O aviso de SISTEMA — o que toca e
+       acende o bloqueio — passa pela política: silêncio à noite e no máximo
+       3 por sessão. "Inteligente" é isso: o canal continuar valendo algo. */
+    Conquistas.definirReacao((c, politica) => {
+      setTimeout(() => avisar(`Conquista: ${c.nome} 🏆`, c.icone), 600);
+      if (politica.pode && window.PonteAndroid && typeof PonteAndroid.notificar === 'function') {
+        try { PonteAndroid.notificar('Conquista: ' + c.nome, c.descricao); } catch (_) {}
+      }
+    });
 
     app = document.getElementById('app');
     pilhaEl = document.getElementById('pilha');

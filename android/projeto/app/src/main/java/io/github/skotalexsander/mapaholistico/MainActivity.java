@@ -3,6 +3,7 @@ package io.github.skotalexsander.mapaholistico;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
@@ -13,6 +14,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.webkit.ConsoleMessage;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
@@ -158,6 +162,15 @@ public class MainActivity extends android.app.Activity {
         // sobre violeta — e nao a barra ilegivel a sessao inteira.
         fundoClaro(true);
 
+        // Em build de DEPURAÇÃO, o WebView aceita o inspetor do Chrome
+        // (chrome://inspect e CDP). É o que permite à bancada falar com a
+        // página DENTRO do APK — e é como a tela de bloqueio foi provada.
+        // Em release este flag é falso e nada disto existe.
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
+
+        criarCanalDeAvisos();
         registrarVoltar();
         web.loadUrl(INICIO);
     }
@@ -252,6 +265,64 @@ public class MainActivity extends android.app.Activity {
     }
 
     private static final int PEDIDO_LOCAL = 7301;
+    private static final int PEDIDO_AVISOS = 7302;
+    private static final String CANAL_CONQUISTAS = "conquistas";
+    private String avisoPendenteTitulo;
+    private String avisoPendenteCorpo;
+
+    /**
+     * O canal é o que decide ONDE o aviso aparece — e a tela de bloqueio é
+     * decisão do canal, não da notificação.
+     *
+     * VISIBILITY_PUBLIC mostra o conteúdo no bloqueio. É deliberado e é seguro
+     * AQUI: os avisos deste app são conquistas ("Primeiros passos"), nunca dado
+     * sensível. Num aviso de "a terapeuta respondeu você", a decisão teria de
+     * ser revista — conteúdo de saúde na tela de bloqueio é vazamento para
+     * quem estiver olhando por cima do ombro.
+     *
+     * IMPORTANCE_DEFAULT toca som mas não invade a tela (heads-up é
+     * IMPORTANCE_HIGH). Conquista não é urgência; aviso que invade ensina a
+     * desligar o canal.
+     */
+    private void criarCanalDeAvisos() {
+        if (Build.VERSION.SDK_INT < 26) return;
+        NotificationChannel canal = new NotificationChannel(
+                CANAL_CONQUISTAS, "Conquistas",
+                NotificationManager.IMPORTANCE_DEFAULT);
+        canal.setDescription("Avisos de conquistas do Mapa Holístico");
+        canal.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
+        ((NotificationManager) getSystemService(NOTIFICATION_SERVICE))
+                .createNotificationChannel(canal);
+    }
+
+    private boolean podeNotificar() {
+        if (Build.VERSION.SDK_INT < 33) return true;   // antes do 13 não há pedido
+        return checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void mostrarAviso(String titulo, String corpo) {
+        // Tocar o aviso abre o app — aviso que não leva a lugar nenhum é beco.
+        Intent abrir = new Intent(this, MainActivity.class);
+        abrir.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent toque = PendingIntent.getActivity(
+                this, 0, abrir, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        android.app.Notification.Builder b = (Build.VERSION.SDK_INT >= 26)
+                ? new android.app.Notification.Builder(this, CANAL_CONQUISTAS)
+                : new android.app.Notification.Builder(this);
+        b.setSmallIcon(R.mipmap.ic_launcher)
+         .setContentTitle(titulo)
+         .setContentText(corpo)
+         .setContentIntent(toque)
+         .setAutoCancel(true)
+         .setVisibility(android.app.Notification.VISIBILITY_PUBLIC);
+
+        // Um id por título: duas conquistas diferentes convivem; a mesma
+        // conquista repetida (não deveria acontecer) substitui em vez de empilhar.
+        ((NotificationManager) getSystemService(NOTIFICATION_SERVICE))
+                .notify(titulo.hashCode(), b.build());
+    }
     private String origemPendente;
     private GeolocationPermissions.Callback respostaPendente;
 
@@ -269,6 +340,20 @@ public class MainActivity extends android.app.Activity {
     @Override
     public void onRequestPermissionsResult(int pedido, String[] permissoes, int[] resultados) {
         super.onRequestPermissionsResult(pedido, permissoes, resultados);
+
+        if (pedido == PEDIDO_AVISOS) {
+            boolean deu = resultados.length > 0
+                    && resultados[0] == PackageManager.PERMISSION_GRANTED;
+            if (deu && avisoPendenteTitulo != null) {
+                mostrarAviso(avisoPendenteTitulo, avisoPendenteCorpo);
+            }
+            // Negou: o aviso morre em silêncio. A conquista continua na tela
+            // do app — a permissão nega o CANAL, não o fato.
+            avisoPendenteTitulo = null;
+            avisoPendenteCorpo = null;
+            return;
+        }
+
         if (pedido != PEDIDO_LOCAL || respostaPendente == null) return;
 
         boolean concedeu = false;
@@ -287,6 +372,29 @@ public class MainActivity extends android.app.Activity {
             final Uri u = Uri.parse(url);
             runOnUiThread(new Runnable() {
                 @Override public void run() { MainActivity.this.abrirFora(u); }
+            });
+        }
+
+        /**
+         * A página conquistou algo e a POLÍTICA dela liberou o aviso (silêncio
+         * noturno e limite por sessão são decididos LÁ, onde vive o relógio
+         * simulável). Aqui só resta a permissão do sistema: sem ela, pede — e
+         * guarda o aviso para mostrar assim que a pessoa conceder.
+         */
+        @JavascriptInterface
+        public void notificar(final String titulo, final String corpo) {
+            if (titulo == null || corpo == null) return;
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    if (podeNotificar()) {
+                        mostrarAviso(titulo, corpo);
+                    } else if (Build.VERSION.SDK_INT >= 33) {
+                        avisoPendenteTitulo = titulo;
+                        avisoPendenteCorpo = corpo;
+                        requestPermissions(new String[]{
+                                Manifest.permission.POST_NOTIFICATIONS }, PEDIDO_AVISOS);
+                    }
+                }
             });
         }
 

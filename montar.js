@@ -23,7 +23,7 @@ const RAIZ = __dirname;
 const SRC = path.join(RAIZ, 'src');
 const SAIDA = path.join(RAIZ, 'prototipo');
 
-const ORDEM_JS = ['01c-icone.js', '02-fisica.js', '03-dados.js', '04-mapa.js', '04b-mapa-real.js', '04c-gps.js', '05-telas.js', '06-app.js'];
+const ORDEM_JS = ['01c-icone.js', '02-fisica.js', '03-dados.js', '03b-conquistas.js', '04-mapa.js', '04b-mapa-real.js', '04c-gps.js', '05-telas.js', '06-app.js'];
 
 function ler(nome) {
   const p = path.join(SRC, nome);

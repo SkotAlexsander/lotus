@@ -18,8 +18,13 @@ de execução, não enfeite.
 | 3 | `03-funcoes-e-gatilhos.sql` | o que o banco faz sozinho | sim |
 | 4 | `04-rls.sql` | quem pode ver e mexer em quê | sim |
 | 5 | `05-catalogo.sql` | as 12 terapias | sim |
-| 6 | `06-semente.sql` | 12 terapeutas + 55 clientes fictícias | sim |
+| 6 | `08-conquistas-e-notificacoes.sql` | conquistas, caixa de notificações, preferências, aparelhos — e os gatilhos que concedem | sim |
+| 7 | `06-semente.sql` | 12 terapeutas + 55 clientes fictícias | sim |
 | — | `07-limpar-semente.sql` | desfaz **só** a semente | — |
+
+O `08` vem **antes** da semente de propósito: os gatilhos dele reagem a avaliações
+e favoritos, então rodar a semente depois concede conquistas às clientes fictícias
+— inofensivo, e útil num banco de demonstração.
 
 Cada arquivo termina com uma **consulta de conferência**. Rode-a e compare com o
 resultado esperado que está escrito ali. Se não bater, pare — não siga para o
@@ -38,7 +43,7 @@ próximo.
 4. No menu da esquerda: **SQL Editor → New query**.
 5. Abra `01-extensoes.sql`, copie **tudo**, cole e clique em **Run**.
 6. Confira o resultado com o esperado escrito no fim do arquivo.
-7. Repita para o 02, 03, 04, 05 e 06, **nessa ordem**.
+7. Repita para o 02, 03, 04, 05, 08 e 06, **nessa ordem**.
 
 Deu erro em algum? A mensagem do Supabase diz o arquivo e a linha. Não pule para
 o próximo — os erros se acumulam e o último deixa de fazer sentido.
@@ -116,7 +121,7 @@ recebe o endereço completo de quem pediu para mostrar só o bairro.
 
 ```bash
 node banco/gerar_semente.js   # src/03-dados.js -> 06-semente.sql
-node banco/conferir.js        # 10 provas estáticas
+node banco/conferir.js        # 12 provas estáticas
 ```
 
 Digitar os dados de novo em SQL criaria uma segunda verdade — e duas verdades
@@ -151,7 +156,11 @@ gerado:
 5. o esquema liga RLS em **toda** tabela que cria;
 6. toda tabela com RLS tem ao menos uma política (RLS ligada e sem política =
    ninguém lê nada, e o app quebra sem erro no banco);
-7. a semente está em dia com `src/03-dados.js`.
+7. a semente está em dia com `src/03-dados.js`;
+8. o catálogo de **conquistas** do SQL bate com o do app — id, nome e descrição.
+
+A explicação longa de cada decisão está em
+[`documentacao/02-contas-e-banco-de-dados.md`](../documentacao/02-contas-e-banco-de-dados.md).
 
 ---
 

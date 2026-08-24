@@ -12,7 +12,8 @@ navegador, sem instalar nada e sem internet depois de carregar.
 - **Android:** dá para fazer o mesmo pelo Chrome, ou instalar o aplicativo:
   **[baixar o APK](https://github.com/SkotAlexsander/lotus/releases/latest/download/mapa-holistico.apk)**
   (o Android vai avisar que é de fonte desconhecida — é o esperado para aplicativo
-  que não veio da Play Store; ele não pede nenhuma permissão e não acessa a rede).
+  que não veio da Play Store). Ele pede localização e avisos **quando precisa**,
+  nunca na abertura; internet só para o mapa de ruas.
 
 <p align="center">
   <img src="capturas/mapa.png" width="30%" alt="O mapa de ruas reais com as terapeutas da região">
@@ -60,9 +61,12 @@ ficção, nada sai do aparelho e nada fica gravado.
 | Mapa real | ruas de verdade com MapLibre + [OpenFreeMap](https://openfreemap.org) — sem chave, sem cadastro |
 | GPS | localização do aparelho, com o raio de precisão desenhado em metros |
 | Plano B | sem internet ele cai num mapa desenhado por código e continua inteiro |
-| 78 provas | em navegador real: fluxos, contraste, área de toque, 320 px, movimento reduzido |
-| Android | APK instalável, provado em emulador |
-| Banco | SQL completo para Supabase + PostGIS, com RLS |
+| Conquistas | 7 selos que marcam a jornada real — no produto, quem concede é o banco, por gatilho |
+| Avisos | notificação nativa na **tela de bloqueio**, com política: silêncio à noite, no máximo 3 por sessão |
+| 93 provas | em navegador real: fluxos, GPS, conquistas, plano B, orçamentos de desempenho, 5 larguras |
+| Android | APK instalável, provado em emulador — inclusive o aviso no bloqueio |
+| Banco | SQL completo para Supabase + PostGIS: 15 tabelas, RLS em todas, gatilhos que concedem |
+| Documentação | [7 documentos](documentacao/00-INDICE.md) explicando como o código funciona e por quê |
 
 ---
 
@@ -84,6 +88,13 @@ ou outro sem saber qual — e se o mapa real não carregar, o desenhado assume e
 nada quebra. Há uma prova só para isso: `node teste/sem-mapa-real.js` bloqueia o
 MapLibre na rede e verifica que o app continua de pé.
 
+**As conquistas são concedidas por quem não pode ser enganado.** No protótipo
+os selos vivem em memória; no banco, ninguém tem permissão de escrever em
+`conquistas_usuario` — só os gatilhos, disparados pelo fato em si (a avaliação
+publicada, o perfil no ar). Um selo que o aplicativo pudesse se dar não valeria
+nada. E o aviso sabe calar: às 23h a conquista aparece na tela, mas a
+notificação espera o dia começar.
+
 **A física do movimento é levada a sério.** Nada de transição de duração fixa: cada
 gesto é uma mola interrompível, que parte do valor que está na tela, herda a
 velocidade do dedo e projeta o momento para onde ele estava mandando a coisa. É o
@@ -96,24 +107,29 @@ src/                  onde se edita — a numeração é a ORDEM DE CARGA
   01-estilo.css         design system: tokens → materiais → componentes
   02-fisica.js          molas, momento, rubber-band, rastreio de velocidade
   03-dados.js           as 12 terapeutas — fonte única, usada também pelo banco
+  03b-conquistas.js     o catálogo de selos e a política do aviso
   04-mapa.js            traçado urbano por código + gestos do mapa
+  04b-mapa-real.js      o mapa de ruas (MapLibre), mesma interface
+  04c-gps.js            pedir localização, com os seis finais possíveis
   05-telas.js           o HTML de cada tela
   06-app.js             roteador, eventos, navegação
 
 montar.js             src/ → index.html
 banco/                o SQL do Supabase (ver banco/README.md)
 android/              projeto Android escrito à mão
-teste/bancada.js      as 64 provas
+documentacao/         como o código funciona, e por quê — comece pelo 00-INDICE
+teste/                as bancadas: fluxos, GPS, conquistas, plano B
 ```
 
 ### Rodar
 
 ```bash
 node montar.js                # src/ → index.html
-node teste/bancada.js         # as 66 provas de fluxo (precisa de Playwright)
-node teste/gps.js             # as 12 do GPS: permitiu perto, permitiu longe, negou
-node teste/sem-mapa-real.js   # prova o plano B: bloqueia o mapa real e confere
-node banco/conferir.js        # 10 provas estáticas do SQL
+node teste/bancada.js         # 70 provas de fluxo e orçamentos (precisa de Playwright)
+node teste/gps.js             # 13 do GPS: permitiu perto, permitiu longe, negou
+node teste/conquistas.js      # 12 das conquistas e da política do aviso
+node teste/sem-mapa-real.js   # 6 do plano B: bloqueia o mapa real e confere
+node banco/conferir.js        # 12 provas estáticas do SQL
 python android/montar_apk.py  # compila o APK (precisa de Android SDK + JDK 17–23)
 ```
 

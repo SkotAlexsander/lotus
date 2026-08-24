@@ -473,6 +473,55 @@ function checa(cond, nome, detalhe = '') {
   checa(contraste.violetaEmBranco >= 4.5, 'contraste do botão violeta ≥ 4.5', contraste.violetaEmBranco.toFixed(2));
   checa(contraste.abaInativa >= 4.5, 'contraste do rótulo de aba inativa ≥ 4.5', contraste.abaInativa.toFixed(2));
 
+  /* ------------------------------------------------ orçamentos de desempenho */
+  /* Números com régua, não impressões. Estouraram, é regressão — e o commit
+     que estourou é o culpado, não "o app foi ficando lento". */
+  console.log(String.fromCharCode(10) + '— desempenho —');
+
+  // O bloco anterior terminou no fluxo da TERAPEUTA, onde não há aba de
+  // favoritas. Este bloco é autossuficiente: recomeça o app como cliente.
+  await p.goto(ARQUIVO);
+  await abertura(p);
+  await clicar('[data-a="entrarGoogle"]', 400);
+  await clicar('[data-papel="cliente"]', 400);
+  await clicar('[data-a="escolherCidade"]', 500);
+  await clicar('[data-a="definirCidade"][data-cidade="Porto Alegre"]', 1100);
+  await p.waitForFunction(() => document.querySelectorAll('.pin').length === 12, null, { timeout: 20000 }).catch(() => {});
+
+  // Trocar de aba e VOLTAR ao mapa reconstrói o MapLibre (decisão consciente:
+  // destruir ao sair poupa GPU/bateria). Com o cache de tiles quente, isso tem
+  // de caber em 3 s até os pinos estarem de volta.
+  {
+    await clicar('[data-aba="favoritas"]', 400);
+    const t0 = Date.now();
+    await clicar('[data-aba="mapa"]', 100);
+    await p.waitForFunction(() => document.querySelectorAll('.pin').length === 12, null, { timeout: 8000 }).catch(() => {});
+    const dt = Date.now() - t0;
+    checa(dt < 3000, 'voltar ao mapa recoloca os 12 pinos em menos de 3 s', `${dt} ms`);
+  }
+
+  // Aplicar um filtro é o gesto mais repetido do app: tem de ser imediato.
+  {
+    const dt = await p.evaluate(() => {
+      const t0 = performance.now();
+      Dados.estado.filtros.terapias.add('Reiki');
+      App.mapa.atualizarPins();
+      const t1 = performance.now();
+      Dados.estado.filtros.terapias.delete('Reiki');
+      App.mapa.atualizarPins();
+      return t1 - t0;
+    });
+    checa(dt < 120, 'aplicar um filtro leva menos de 120 ms', `${dt.toFixed(1)} ms`);
+  }
+
+  // O arquivo único tem orçamento: 500 KB. Fontes embutidas já custam 114;
+  // crescer além disso sem notar é como o app "vai ficando lento".
+  {
+    const bytes = fs.statSync(ARQUIVO.startsWith('http') ? path.join(__dirname, '..', 'prototipo', 'index.html')
+                                                         : ARQUIVO.replace('file:///', '')).size;
+    checa(bytes < 500 * 1024, 'o arquivo único cabe no orçamento de 500 KB', `${(bytes / 1024).toFixed(0)} KB`);
+  }
+
   /* movimento reduzido: nada pode quebrar */
   const ctx2 = await browser.newContext({ ...devices['iPhone 13'], locale: 'pt-BR', reducedMotion: 'reduce' });
   const p2 = await ctx2.newPage();
@@ -500,6 +549,15 @@ function checa(cond, nome, detalhe = '') {
   const larguraCorpo = await p3.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   checa(larguraCorpo, 'no desktop a página não rola de lado');
   await p3.screenshot({ path: path.join(FOTOS, '20-desktop.png') });
+
+  /* tablet: a moldura de "palco" tem de segurar também no meio do caminho */
+  const ctx5 = await browser.newContext({ viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true, locale: 'pt-BR' });
+  const p5 = await ctx5.newPage();
+  await p5.goto(ARQUIVO);
+  await abertura(p5);
+  const estouro768 = await p5.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  checa(!estouro768, 'cabe num tablet de 768px sem rolar de lado');
+  await ctx5.close();
 
   /* tela pequena (celular antigo) */
   const ctx4 = await browser.newContext({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true, locale: 'pt-BR' });

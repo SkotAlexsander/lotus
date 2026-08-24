@@ -57,10 +57,12 @@ function lerEsquema(sql) {
   return tabelas;
 }
 
-const esquemaSql = ler('02-tabelas.sql');
+// O esquema vive em DOIS arquivos: o núcleo (02) e as conquistas/notificações
+// (08). Ler só o primeiro faria toda tabela nova passar sem conferência.
+const esquemaSql = ler('02-tabelas.sql') + ler('08-conquistas-e-notificacoes.sql');
 const esquema = lerEsquema(esquemaSql);
-checa(Object.keys(esquema).length === 10,
-  'o esquema declara as 10 tabelas',
+checa(Object.keys(esquema).length === 15,
+  'o esquema declara as 15 tabelas',
   Object.keys(esquema).join(', '));
 
 /* ------------------------------------------- 2. semente: tabelas e colunas */
@@ -104,6 +106,36 @@ checa(soNoSql.length === 0 && soNoApp.length === 0,
   'o catálogo do banco bate com o do protótipo',
   [...soNoSql.map((x) => 'só no SQL: ' + x), ...soNoApp.map((x) => 'só no app: ' + x)].join(' | '));
 
+/* ------------- 3b. catálogo de CONQUISTAS: o do app x o do banco */
+/* Mesmo problema do catálogo de terapias: duas listas da mesma coisa separam
+   com o tempo. Compara id, nome E descrição — um selo com texto diferente no
+   app e no banco é defeito que ninguém reporta, só estranha. */
+{
+  const codigoConq = fs.readFileSync(path.join(RAIZ, 'src', '03b-conquistas.js'), 'utf8');
+  const prefixo = 'const Dados = { agora: () => new Date(), estado: { papel: null, favoritos: new Set() } };';
+  const Conq = new Function(prefixo + codigoConq + ';return Conquistas;')();
+  const sql08 = ler('08-conquistas-e-notificacoes.sql');
+  // Só o bloco do INSERT do catálogo — solto no arquivo, o padrão ('a','b','c')
+  // também casa com CHECKs e jsonb, e a prova reprovaria por pescar fora.
+  const blocoIns = (sql08.match(/insert into conquistas[\s\S]*?on conflict/i) || [''])[0];
+  const doBanco = [...blocoIns.matchAll(/\('([a-z-]+)',\s*'([^']+)',\s*'([^']+)'/g)]
+    .map((m) => ({ id: m[1], nome: m[2], descricao: m[3] }));
+
+  const problemas = [];
+  for (const c of Conq.CATALOGO) {
+    const b = doBanco.find((x) => x.id === c.id);
+    if (!b) { problemas.push('só no app: ' + c.id); continue; }
+    if (b.nome !== c.nome) problemas.push(`${c.id}: nome difere ("${c.nome}" x "${b.nome}")`);
+    if (b.descricao !== c.descricao) problemas.push(`${c.id}: descrição difere`);
+  }
+  for (const b of doBanco) {
+    if (!Conq.CATALOGO.find((x) => x.id === b.id)) problemas.push('só no banco: ' + b.id);
+  }
+  checa(problemas.length === 0,
+    'o catálogo de conquistas do banco bate com o do app',
+    problemas.slice(0, 4).join(' | '));
+}
+
 /* ------------------------- 4. aspas simples balanceadas em cada comando */
 // Em SQL o apóstrofo escapa dobrado (''). Trocar os '' por nada e contar o que
 // sobra: número ímpar = string aberta.
@@ -118,7 +150,7 @@ const quebrados = arquivosSql.map((f) => aspasQuebradas(ler(f), f)).filter(Boole
 checa(quebrados.length === 0, 'aspas simples balanceadas em todos os .sql', quebrados.join(' | '));
 
 /* ----------------------------------------- 5. RLS ligada em toda tabela */
-const rls = ler('04-rls.sql');
+const rls = ler('04-rls.sql') + ler('08-conquistas-e-notificacoes.sql');
 const comRls = new Set(
   [...rls.matchAll(/alter table\s+(\w+)\s+enable row level security/gi)].map((x) => x[1].toLowerCase())
 );
@@ -138,7 +170,9 @@ checa(semPolitica.length === 0,
 
 /* ------------------------------ 7. a ordem dos arquivos é a ordem de execução */
 const esperados = ['01-extensoes.sql', '02-tabelas.sql', '03-funcoes-e-gatilhos.sql',
-                   '04-rls.sql', '05-catalogo.sql', '06-semente.sql', '07-limpar-semente.sql'];
+                   '04-rls.sql', '05-catalogo.sql', '06-semente.sql', '07-limpar-semente.sql',
+                   '08-conquistas-e-notificacoes.sql'];
+checa(esperados.length === 8, 'os 8 arquivos da sequência são conhecidos');
 const faltando = esperados.filter((f) => !arquivosSql.includes(f));
 checa(faltando.length === 0, 'os 7 arquivos da sequência existem', faltando.join(', '));
 

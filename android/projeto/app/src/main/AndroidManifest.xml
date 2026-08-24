@@ -35,6 +35,13 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
 
+    <!-- NOTIFICAÇÕES: a partir do Android 13 esta permissão é obrigatória para
+         o app mostrar QUALQUER aviso — e ela é pedida em tempo de execução,
+         como a de localização. O WebView não tem a Notification API da web
+         (lição já paga em outro projeto desta casa), então o aviso que aparece
+         na tela de bloqueio é NATIVO, criado pela ponte MainActivity.Ponte. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
