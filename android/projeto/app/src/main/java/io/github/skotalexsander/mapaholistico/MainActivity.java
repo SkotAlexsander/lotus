@@ -1,7 +1,9 @@
 package io.github.skotalexsander.mapaholistico;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -12,6 +14,7 @@ import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
+import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -69,6 +72,9 @@ public class MainActivity extends android.app.Activity {
         // Ignora a fonte gigante do sistema: o protótipo tem layout de tela de
         // celular e escala de texto do sistema quebraria o que se quer avaliar.
         cfg.setTextZoom(100);
+        // Sem isto o `navigator.geolocation` da página fica em SILÊNCIO no
+        // WebView: não responde e não dá erro — o pior tipo de falha.
+        cfg.setGeolocationEnabled(true);
         if (Build.VERSION.SDK_INT >= 26) web.setDefaultFocusHighlightEnabled(false);
 
         final WebViewAssetLoader carregador = new WebViewAssetLoader.Builder()
@@ -98,6 +104,33 @@ public class MainActivity extends android.app.Activity {
         });
 
         web.setWebChromeClient(new WebChromeClient() {
+            /**
+             * A página pediu localização.
+             *
+             * São DUAS permissões em série, e confundi-las é o erro clássico:
+             *   1. a do ANDROID, do sistema para o aplicativo  (a caixa cinza)
+             *   2. a do WEBVIEW, do aplicativo para a página   (esta chamada)
+             *
+             * Conceder a segunda sem ter a primeira devolve "posição
+             * indisponível" sem explicação nenhuma.
+             */
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origem, GeolocationPermissions.Callback resposta) {
+                if (temPermissaoDeLocal()) {
+                    resposta.invoke(origem, true, false);
+                    return;
+                }
+                origemPendente = origem;
+                respostaPendente = resposta;
+                if (Build.VERSION.SDK_INT >= 23) {
+                    requestPermissions(new String[]{
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION }, PEDIDO_LOCAL);
+                } else {
+                    resposta.invoke(origem, true, false);
+                }
+            }
+
             @Override
             public boolean onConsoleMessage(ConsoleMessage m) {
                 // Erro de JavaScript no aparelho some sem isto. Ver com:
@@ -216,6 +249,34 @@ public class MainActivity extends android.app.Activity {
         } catch (Exception e) {
             Log.d("MapaHolistico", "nada no celular abre " + destino + ": " + e.getMessage());
         }
+    }
+
+    private static final int PEDIDO_LOCAL = 7301;
+    private String origemPendente;
+    private GeolocationPermissions.Callback respostaPendente;
+
+    private boolean temPermissaoDeLocal() {
+        if (Build.VERSION.SDK_INT < 23) return true;
+        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * A pessoa respondeu à caixa do Android. Só agora dá para responder à
+     * página — e a resposta tem de ser HONESTA: negou é negou, e a página
+     * mostra o caminho sem GPS em vez de ficar esperando para sempre.
+     */
+    @Override
+    public void onRequestPermissionsResult(int pedido, String[] permissoes, int[] resultados) {
+        super.onRequestPermissionsResult(pedido, permissoes, resultados);
+        if (pedido != PEDIDO_LOCAL || respostaPendente == null) return;
+
+        boolean concedeu = false;
+        for (int r : resultados) if (r == PackageManager.PERMISSION_GRANTED) concedeu = true;
+
+        respostaPendente.invoke(origemPendente, concedeu, false);
+        respostaPendente = null;
+        origemPendente = null;
     }
 
     /** A ponte que a página chama. Duas funções, e nenhuma devolve dados. */

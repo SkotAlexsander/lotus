@@ -48,7 +48,9 @@ function checa(ok, nome, detalhe = '') {
   await p.waitForSelector('#splash', { state: 'detached', timeout: 10000 }).catch(() => {});
   await p.click('[data-a="entrarGoogle"]'); await p.waitForTimeout(400);
   await p.click('[data-papel="cliente"]'); await p.waitForTimeout(400);
-  await p.click('[data-a="permitirLocal"]', { timeout: 8000 }); await p.waitForTimeout(1200);
+  // Sem GPS concedido, 'Permitir' faz o certo e oferece a cidade.
+  await p.click('[data-a="escolherCidade"]'); await p.waitForTimeout(500);
+  await p.click('[data-a="definirCidade"][data-cidade="Porto Alegre"]'); await p.waitForTimeout(1400);
 
   console.log(`\n  (${bloqueados} requisições de mapa bloqueadas)\n`);
 

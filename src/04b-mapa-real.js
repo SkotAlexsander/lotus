@@ -102,9 +102,84 @@ const MapaReal = (() => {
       eu.style.position = 'relative';
       eu.style.margin = '0';
       eu.innerHTML = '<div class="eu__halo"></div><div class="eu__nucleo"></div>';
-      new maplibregl.Marker({ element: eu, anchor: 'center' })
+      marcadorEu = new maplibregl.Marker({ element: eu, anchor: 'center' })
         .setLngLat([Dados.EU.lng, Dados.EU.lat])
         .addTo(mapa);
+
+      /* O CÍRCULO DE PRECISÃO é medido, não decorativo.
+
+         O GPS não devolve um ponto, devolve um ponto E um raio. Desenhar só o
+         ponto afirma uma certeza que o aparelho não tem — e num app cuja
+         pergunta é "quem está perto de mim", 30 m e 2 km mudam a resposta.
+
+         O raio vem em METROS e o mapa desenha em PIXELS, e a conversão depende
+         do zoom e da latitude:  px = m · 2^zoom / (156543,03 · cos(lat)).
+
+         ⚠️ Escrever essa conta direto (`['*', raio, ['^', 2, ['zoom']]]`) o
+         MapLibre RECUSA: "zoom" só pode ser a entrada de um `interpolate` ou
+         `step` de topo. A forma aceita é um `interpolate` exponencial de base
+         2 entre os zooms extremos — que dá exatamente 2^zoom, escrito do jeito
+         que o motor entende. */
+      mapa.addSource('precisao', { type: 'geojson', data: pontoPrecisao() });
+      mapa.addLayer({
+        id: 'precisao',
+        type: 'circle',
+        source: 'precisao',
+        paint: {
+          'circle-color': '#2C7BE5',
+          'circle-opacity': 0.10,
+          'circle-stroke-color': '#2C7BE5',
+          'circle-stroke-opacity': 0.28,
+          'circle-stroke-width': 1,
+          'circle-radius': raioEmPixels(),
+        },
+      }, mapa.getStyle().layers[mapa.getStyle().layers.length - 1].id);
+      atualizarPrecisao();
+    }
+
+    let marcadorEu = null;
+
+    /* O raio, em pixels, para cada zoom.
+
+       Como existe UM ponto só, a conta cabe em JavaScript e a camada recebe
+       números puros — em vez de ler o raio de dentro do dado
+       (`['get','porPixel']`). Menos expressão, menos superfície para errar.
+
+       ⚠️ NOTA sobre um aviso do console que NÃO é nosso: aparece repetido um
+       "Expected value to be of type number, but found null". Eu quase reescrevi
+       esta camada por causa dele. `teste/sonda-estilo-puro.js` sobe o MapLibre
+       com o estilo positron SEM UMA LINHA do projeto e o aviso aparece igual:
+       ele vem do estilo do OpenFreeMap. Antes de consertar um aviso, descobrir
+       de quem ele é — senão conserta-se o que não está quebrado. */
+    function raioEmPixels() {
+      const m = Dados.EU.precisao || 0;
+      const metrosPorPixelNoZoom0 = 156543.03392 * Math.cos((Dados.EU.lat * Math.PI) / 180);
+      const base = m > 0 ? m / metrosPorPixelNoZoom0 : 0;
+      return ['interpolate', ['exponential', 2], ['zoom'],
+              0, base, 22, base * 4194304];      // 2^22
+    }
+
+    function pontoPrecisao() {
+      return {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [Dados.EU.lng, Dados.EU.lat] },
+        properties: {},
+      };
+    }
+
+    function atualizarPrecisao() {
+      const f = mapa.getSource('precisao');
+      if (!f) return;
+      f.setData(pontoPrecisao());
+      if (mapa.getLayer('precisao')) {
+        mapa.setPaintProperty('precisao', 'circle-radius', raioEmPixels());
+      }
+    }
+
+    /* Chamado quando o GPS reporta um passo novo. */
+    function atualizarEu() {
+      if (marcadorEu) marcadorEu.setLngLat([Dados.EU.lng, Dados.EU.lat]);
+      atualizarPrecisao();
     }
 
     /* O filtro não destrói e recria marcador: só apaga o que saiu da busca.
@@ -148,6 +223,7 @@ const MapaReal = (() => {
       motor: 'real',
       centralizar,
       atualizarPins,
+      atualizarEu,
       selecionar,
       definirOffsetBaixo: (v) => { offsetBaixo = v; },
       definirOffsetTopo: (v) => { offsetTopo = v; },

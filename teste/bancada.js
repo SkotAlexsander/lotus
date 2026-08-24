@@ -131,7 +131,20 @@ function checa(cond, nome, detalhe = '') {
 
   checa(await p.isVisible('[data-a="permitirLocal"]'), 'pedido de localização apareceu');
   await foto('03-localizacao');
-  await clicar('[data-a="permitirLocal"]', 900);
+
+  /* ⚠️ Esta bancada entra pelo caminho SEM GPS, de propósito.
+
+     Desde que "Permitir localização" passou a consultar o aparelho de verdade,
+     ela deixou de levar direto ao mapa: sem permissão concedida, o app faz o
+     certo e oferece a escolha de cidade. Conceder GPS aqui tornaria as 60+
+     provas seguintes dependentes da posição fingida — e a distância de cada
+     terapeuta, que várias provas conferem, mudaria de valor.
+
+     O caminho com GPS tem bancada própria: `node teste/gps.js`, que prova os
+     três finais (perto, longe demais, negado). */
+  await clicar('[data-a="escolherCidade"]', 600);
+  checa(await p.isVisible('[data-a="definirCidade"]'), 'escolha de cidade apareceu');
+  await clicar('[data-a="definirCidade"][data-cidade="Porto Alegre"]', 1100);
 
   checa(await p.isVisible('#mapa'), 'mapa abriu');
   // No mapa real os pinos só nascem depois que o estilo baixa (~1,5 s medido).
@@ -469,7 +482,8 @@ function checa(cond, nome, detalhe = '') {
   await abertura(p2);
   await p2.click('[data-a="entrarGoogle"]'); await p2.waitForTimeout(400);
   await p2.click('[data-papel="cliente"]'); await p2.waitForTimeout(400);
-  await p2.click('[data-a="permitirLocal"]'); await p2.waitForTimeout(900);
+  await p2.click('[data-a="escolherCidade"]'); await p2.waitForTimeout(500);
+  await p2.click('[data-a="definirCidade"][data-cidade="Porto Alegre"]'); await p2.waitForTimeout(1200);
   const mapaSemMovimento = await p2.isVisible('#mapa');
   await enquadrar(p2, 't8');
   await p2.click('.pin[data-id="t8"]'); await p2.waitForTimeout(500);

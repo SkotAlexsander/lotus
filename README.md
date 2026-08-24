@@ -58,8 +58,9 @@ ficção, nada sai do aparelho e nada fica gravado.
 | 16 telas | os dois lados completos, do cadastro ao painel |
 | 1 arquivo | HTML auto-contido — fontes embutidas, sem framework |
 | Mapa real | ruas de verdade com MapLibre + [OpenFreeMap](https://openfreemap.org) — sem chave, sem cadastro |
+| GPS | localização do aparelho, com o raio de precisão desenhado em metros |
 | Plano B | sem internet ele cai num mapa desenhado por código e continua inteiro |
-| 65 provas | em navegador real: fluxos, contraste, área de toque, 320 px, movimento reduzido |
+| 78 provas | em navegador real: fluxos, contraste, área de toque, 320 px, movimento reduzido |
 | Android | APK instalável, provado em emulador |
 | Banco | SQL completo para Supabase + PostGIS, com RLS |
 
@@ -70,6 +71,12 @@ ficção, nada sai do aparelho e nada fica gravado.
 Um único arquivo HTML, sem framework e sem dependência externa. A razão é prática:
 o protótipo precisa abrir com duplo clique, funcionar sem internet e caber num link
 que se manda para uma terapeuta testar no celular dela.
+
+**O ponto azul não mente.** A localização vem do aparelho, e o círculo em volta
+é o raio de precisão que o GPS informou — convertido de metros para pixels a cada
+zoom. Desenhar só o ponto afirmaria uma certeza que o aparelho não tem, e num app
+cuja pergunta é "quem está perto de mim", 30 m e 2 km dão respostas diferentes.
+Negar a permissão não trava nada: existe o modo cidade, e a tela explica por quê.
 
 **Dois mapas, a mesma forma.** O de ruas reais (MapLibre + OpenFreeMap) e um
 desenhado por código. Os dois expõem as mesmas funções, então o aplicativo usa um
@@ -103,7 +110,8 @@ teste/bancada.js      as 64 provas
 
 ```bash
 node montar.js                # src/ → index.html
-node teste/bancada.js         # as 65 provas (precisa de Playwright)
+node teste/bancada.js         # as 66 provas de fluxo (precisa de Playwright)
+node teste/gps.js             # as 12 do GPS: permitiu perto, permitiu longe, negou
 node teste/sem-mapa-real.js   # prova o plano B: bloqueia o mapa real e confere
 node banco/conferir.js        # 10 provas estáticas do SQL
 python android/montar_apk.py  # compila o APK (precisa de Android SDK + JDK 17–23)
@@ -116,7 +124,7 @@ python android/montar_apk.py  # compila o APK (precisa de Android SDK + JDK 17�
 | Hoje | No MVP |
 |---|---|
 | Login aceita qualquer coisa | Supabase Auth: Google e código por celular |
-| Localização fixa | localização do aparelho, com escolha de cidade como plano B |
+| Ninguém está cadastrado de verdade | terapeutas reais, verificadas |
 | Mapa sem endereço clicável | geocodificação do endereço digitado |
 | 12 terapeutas num arquivo JS | Postgres + PostGIS, busca por raio |
 | Favoritas e avaliações somem ao recarregar | gravadas no banco, com RLS |

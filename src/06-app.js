@@ -19,7 +19,7 @@ const App = (() => {
       case 'codigo':      return Telas.codigo();
       case 'papel':       return Telas.papel();
       case 'localizacao': return Telas.localizacao();
-      case 'cidades':     return Telas.cidades();
+      case 'cidades':     return Telas.cidades(p.motivo);
       case 'raiz':        return Telas.raizCliente();
       case 'raizT':       return Telas.raizTerapeuta();
       case 'perfil':      return Telas.perfil(Dados.porId(p.id));
@@ -206,6 +206,7 @@ const App = (() => {
       // O MapLibre segura contexto de GPU e ouvintes: sair da aba sem descartar
       // deixa um mapa invisível vivo, e outro nasce na volta.
       if (mapaCtrl && mapaCtrl.destruir) mapaCtrl.destruir();
+      if (pararDeSeguir) { pararDeSeguir(); pararDeSeguir = null; }
       mapaCtrl = null; folha = null;
     }
     if (E.aba === 'meuPerfil' || E.aba === 'mapa') montarMinimapas(cx);
@@ -249,6 +250,7 @@ const App = (() => {
 
     mapaCtrl.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao', false);
     ligarFolha();
+    if (E.localizacao === 'concedida' && Dados.EU.origem === 'gps') seguirPosicao();
   }
 
   function selecionarPin(id, animar = true) {
@@ -550,6 +552,93 @@ const App = (() => {
     }
   }
 
+  /* =============================================== localização de verdade */
+  /*
+     Pedir GPS não é um sim/não: é uma espera que pode acabar de seis jeitos
+     (ver src/04c-gps.js). Cada um precisa de uma tela — e a pior resposta
+     possível é o botão ficar mudo enquanto o aparelho procura satélite.
+  */
+  let pararDeSeguir = null;
+
+  function pedirLocalizacao(botao) {
+    if (!Gps.disponivel()) {
+      // Não prometer o que o navegador não oferece. Explica e abre o caminho
+      // sem GPS, em vez de deixar a pessoa tocando num botão que nunca responde.
+      avisar(Gps.motivoIndisponivel(), 'info');
+      setTimeout(() => abrir('cidades', { motivo: Gps.motivoIndisponivel() }), 900);
+      return;
+    }
+
+    const original = botao ? botao.innerHTML : '';
+    if (botao) {
+      botao.disabled = true;
+      botao.innerHTML = `${Telas.ic('mira', 20)} Procurando você…`;
+    }
+    const restaurar = () => { if (botao) { botao.disabled = false; botao.innerHTML = original; } };
+
+    Gps.pedir({
+      aoObter: (pos) => {
+        restaurar();
+        Dados.definirPosicao({ lat: pos.lat, lng: pos.lng, precisao: pos.precisao,
+                               origem: 'gps', bairro: 'Sua localização', cidade: '' });
+        E.localizacao = 'concedida';
+        trocarRaiz('raiz');
+
+        /* Quem está longe da Grande Porto Alegre veria o mapa da própria rua e
+           ZERO terapeutas — e concluiria que o app está quebrado. Está certo:
+           as 12 são ficção e moram aqui. Dizer isso é melhor que deixar deduzir. */
+        const d = Gps.longeDosDados(pos.lat, pos.lng);
+        if (d.longe) {
+          setTimeout(() => perguntar(
+            'Você está longe das terapeutas de teste',
+            `Este protótipo tem 12 terapeutas fictícias, todas na Grande Porto Alegre — `
+            + `a ${d.km} km de você. Quer ver o mapa de lá para conhecer o app?`,
+            'Ver a região de teste',
+            () => { Dados.restaurarPosicaoFicticia(); E.localizacao = 'cidade'; renderAba();
+                    if (mapaCtrl) { mapaCtrl.atualizarEu(); mapaCtrl.atualizarPins();
+                                    mapaCtrl.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao', false); } }
+          ), 700);
+          return;
+        }
+
+        avisar(pos.imprecisa
+          ? `Localização aproximada (±${pos.precisao} m). Perto de uma janela melhora.`
+          : 'Prontinho — este é o seu mapa', 'local');
+
+        seguirPosicao();
+        nomearLugar(pos.lat, pos.lng);
+      },
+      aoFalhar: (erro) => {
+        restaurar();
+        avisar(erro.mensagem, 'info');
+        // Negou ou falhou: o app CONTINUA. O modo cidade existe para isto.
+        setTimeout(() => abrir('cidades', { motivo: erro.mensagem }), 1100);
+      },
+    });
+  }
+
+  /* O ponto azul acompanha quem anda. O observador é parado ao sair do mapa —
+     esquecido, ele consome bateria com o app em outra tela. */
+  function seguirPosicao() {
+    if (pararDeSeguir) pararDeSeguir();
+    pararDeSeguir = Gps.acompanhar((pos) => {
+      Dados.definirPosicao({ lat: pos.lat, lng: pos.lng, precisao: pos.precisao, origem: 'gps' });
+      if (mapaCtrl && mapaCtrl.atualizarEu) mapaCtrl.atualizarEu();
+      if (E.modo === 'lista') renderAba();     // a lista é ordenada por distância
+    });
+  }
+
+  /* Enfeite honesto: troca dois números por "Petrópolis, Porto Alegre" na tela
+     da conta. Falha em silêncio — não pode segurar nada. */
+  function nomearLugar(lat, lng) {
+    Gps.ondeEstou(lat, lng, (lugar) => {
+      if (!lugar.bairro && !lugar.cidade) return;
+      Dados.EU.bairro = lugar.bairro || 'Sua localização';
+      Dados.EU.cidade = lugar.cidade || '';
+      if (E.aba === 'conta') renderAba();
+    });
+  }
+
   /* ---------------------------------------------- tela do código SMS */
   function ligarCodigo(el) {
     const campos = Array.from(el.querySelectorAll('.digito'));
@@ -669,14 +758,11 @@ const App = (() => {
         else { E.aba = 'meuPerfil'; E.passo = 0; abrir('assistente'); }
         break;
 
-      case 'permitirLocal':
-        E.localizacao = 'concedida';
-        trocarRaiz('raiz');
-        avisar(`Prontinho — você está em ${Dados.EU.bairro}`, 'local');
-        break;
+      case 'permitirLocal': pedirLocalizacao(el); break;
       case 'escolherCidade': abrir('cidades'); break;
       case 'definirCidade':
         E.localizacao = 'cidade'; E.cidadeEscolhida = el.dataset.cidade;
+        Dados.restaurarPosicaoFicticia();
         trocarRaiz('raiz');
         avisar(`Mostrando terapeutas de ${el.dataset.cidade}`, 'local');
         break;
@@ -778,10 +864,18 @@ const App = (() => {
       case 'verTermos': case 'verPrivacidade':
         avisar('No app real, abre o documento completo.', 'info'); break;
       case 'alternarLocal':
-        E.localizacao = E.localizacao === 'concedida' ? 'cidade' : 'concedida';
-        if (E.localizacao === 'cidade' && !E.cidadeEscolhida) E.cidadeEscolhida = Dados.EU.cidade;
-        renderAba();
-        avisar(E.localizacao === 'concedida' ? 'Localização ligada' : 'Localização desligada — usando a cidade', 'local');
+        if (E.localizacao === 'concedida') {
+          if (pararDeSeguir) { pararDeSeguir(); pararDeSeguir = null; }
+          Dados.restaurarPosicaoFicticia();
+          E.localizacao = 'cidade';
+          if (!E.cidadeEscolhida) E.cidadeEscolhida = Dados.EU.cidade;
+          renderAba();
+          avisar('Localização desligada — usando a cidade', 'local');
+        } else {
+          // Religar é pedir de novo ao aparelho, não trocar uma variável:
+          // o navegador pode ter tido a permissão revogada desde então.
+          pedirLocalizacao(el);
+        }
         break;
       case 'exportar': avisar('Enviaremos a cópia dos seus dados por e-mail.', 'saida'); break;
       case 'excluirConta':

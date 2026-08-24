@@ -294,11 +294,23 @@ const Telas = (() => {
     </div>`;
   }
 
-  function cidades() {
+  function cidades(motivo) {
     const lista = ['Porto Alegre', 'Canoas', 'Cachoeirinha', 'Gravataí', 'Viamão', 'Alvorada', 'São Leopoldo', 'Novo Hamburgo'];
+    /* Chegar aqui sem saber POR QUE é desnorteante — a pessoa tocou em
+       "Permitir" e foi parar noutra tela. O aviso some em segundos; a
+       explicação tem de ficar. */
+    const explicacao = motivo ? `
+      <div class="cartao cartao--plano mb16" style="background:var(--alerta-fundo);border:0">
+        <div class="linha" style="align-items:flex-start">
+          <span style="color:#9A4C31;flex:none">${ic('info', 19)}</span>
+          <p class="pequeno" style="color:#9A4C31">${esc(motivo)}<br>
+            <b>Escolher a cidade resolve:</b> o app funciona igual, só não centraliza sozinho.</p>
+        </div>
+      </div>` : '';
     return `<div class="tela" data-tela="cidades">
       ${cabecalho('Escolher cidade', { sub: 'Sem localização, tudo funciona igual' })}
       <div class="rolar pl pr">
+        ${explicacao}
         ${lista.map((c) => `
           <button class="cartao cartao--plano mb8" style="width:100%;text-align:left" data-a="definirCidade" data-cidade="${c}">
             <div class="entre">
@@ -345,6 +357,7 @@ const Telas = (() => {
           ${Mapa.gerarSVG()}
           ${Mapa.rotulos()}
           <div id="pins">${pinsHTML()}</div>
+          <div class="precisao"></div>
           <div class="eu" style="left:${Dados.EU.x}px;top:${Dados.EU.y}px">
             <div class="eu__halo"></div><div class="eu__nucleo"></div>
           </div>
@@ -689,6 +702,18 @@ const Telas = (() => {
       </div>`;
   }
 
+  /* A tela nunca deve afirmar "você está aqui" sobre um ponto inventado.
+     `origem` diz de onde veio, e o texto muda com ela. */
+  function localizacaoEmTexto() {
+    const e = Dados.estado;
+    if (e.localizacao !== 'concedida' || Dados.EU.origem !== 'gps') {
+      return `Desligada — usando ${esc(e.cidadeEscolhida || Dados.EU.cidade)}`;
+    }
+    const onde = [Dados.EU.bairro, Dados.EU.cidade].filter(Boolean).join(', ');
+    const erro = Dados.EU.precisao ? ` · ±${Dados.EU.precisao} m` : '';
+    return `${esc(onde)}${erro}`;
+  }
+
   /* --- minha conta ------------------------------------------------------- */
   function abaConta() {
     const e = Dados.estado;
@@ -711,14 +736,14 @@ const Telas = (() => {
             <div class="cresce">
               <p class="t1">${esc(e.nomeUsuario)}</p>
               <p class="pequeno dim">${e.entrouPor === 'google' ? 'Entrou com o Google' : `Celular ${esc(e.celular || '')}`}</p>
-              <p class="pequeno dim">${e.localizacao === 'concedida' ? `${Dados.EU.bairro}, ${Dados.EU.cidade}` : `Cidade: ${esc(e.cidadeEscolhida || '—')}`}</p>
+              <p class="pequeno dim">${localizacaoEmTexto()}</p>
             </div>
           </div>
         </div>
 
         <h3 class="micro dim mt24 mb8">Privacidade</h3>
         <div class="cartao" style="padding:0 16px">
-          ${linha('local', 'Localização', e.localizacao === 'concedida' ? 'Usada só na busca, nunca gravada' : 'Desligada — usando cidade', 'alternarLocal')}
+          ${linha('local', 'Localização', localizacaoEmTexto(), 'alternarLocal')}
           ${linha('saida', 'Exportar meus dados', 'Receber uma cópia em e-mail', 'exportar')}
           ${linha('lixo', 'Excluir minha conta', 'Apaga tudo, sem volta', 'excluirConta', 'var(--alerta)')}
         </div>
@@ -1153,7 +1178,7 @@ const Telas = (() => {
   return {
     esc, ic, svg, ICONES, avatar, estrelas, lotus, cabecalho, cartaoTerapeuta, selo, ondeFica, pinsHTML, pinoHTML, pinoSimplesHTML,
     entrar, telefone, codigo, papel, localizacao, cidades,
-    raizCliente, abaMapa, abaLista, abaFavoritas, abaConta, barraAbas,
+    raizCliente, abaMapa, abaLista, abaFavoritas, abaConta, barraAbas, localizacaoEmTexto,
     folhaResumo, perfil, avaliar, filtros, denunciar, barraBusca, chipsFiltro, vazioBusca,
     raizTerapeuta, barraAbasTerapeuta, assistente, passo, abaMeuPerfil, abaAvaliacoesT,
     abaPainel, responder, perfilComoTerapeuta, PASSOS,

@@ -216,6 +216,29 @@ const Mapa = (() => {
       el.querySelectorAll('.pin').forEach((p) => { p.dataset.sel = (p.dataset.id === id ? '1' : '0'); });
     }
 
+    /* Mesmo contrato do mapa real: o ponto azul se move quando o GPS anda.
+       Aqui o raio de precisão vira largura em pixels do plano (120 px = 1 km),
+       que é a única escala que este motor conhece. */
+    function atualizarEu() {
+      const eu = el.querySelector('.eu');
+      if (!eu) return;
+      eu.style.left = Dados.EU.x + 'px';
+      eu.style.top = Dados.EU.y + 'px';
+      const alvo = el.querySelector('.precisao');
+      if (!alvo) return;
+      const m = Dados.EU.precisao || 0;
+      const raio = (m / 1000) * Dados.MUNDO.pxPorKm;   // 120 px = 1 km
+      if (raio > 11) {
+        alvo.dataset.mostrar = '1';
+        alvo.style.left = (Dados.EU.x - raio) + 'px';
+        alvo.style.top = (Dados.EU.y - raio) + 'px';
+        alvo.style.width = (raio * 2) + 'px';
+        alvo.style.height = (raio * 2) + 'px';
+      } else {
+        alvo.dataset.mostrar = '0';
+      }
+    }
+
     function definirOffsetBaixo(v) { offsetBaixo = v; }
     function definirOffsetTopo(v) { offsetTopo = v; }
 
@@ -400,7 +423,7 @@ const Mapa = (() => {
       ampliarNoPonto(el.getBoundingClientRect().left + w / 2, el.getBoundingClientRect().top + offsetTopo + (h - offsetTopo - offsetBaixo) / 2, fator);
     }
 
-    return { motor: 'desenhado', centralizar, centralizarPlano, paraTela, atualizarPins, selecionar,
+    return { motor: 'desenhado', centralizar, centralizarPlano, paraTela, atualizarPins, selecionar, atualizarEu,
              definirOffsetBaixo, definirOffsetTopo, ajustarZoom, pintar, destruir() {},
              get zoom() { return z; } };
   }

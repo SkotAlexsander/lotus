@@ -21,6 +21,20 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- LOCALIZAÇÃO: é a pergunta que o app existe para responder — "quem
+         atende PERTO DE MIM". Sem ela o ponto azul seria um lugar inventado.
+
+         COARSE é declarada junto porque o Android 12+ deixa a pessoa escolher
+         "localização aproximada" na hora de permitir; sem as duas declaradas,
+         essa opção nem aparece e ela fica entre dar a rua exata ou negar tudo.
+
+         ⚠️ A posição NUNCA é gravada: nem em banco, nem em arquivo, nem em log.
+         Ela é usada em memória para centralizar o mapa e ordenar a lista por
+         distância. Fechou o app, acabou. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"

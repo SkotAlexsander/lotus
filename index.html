@@ -564,6 +564,20 @@ a { color: inherit; }
    Perde saturação e presença, sem sair da paleta. */
 .pin--fechada { opacity: 0.62; filter: saturate(0.45) drop-shadow(0 2px 4px rgba(43, 33, 64, 0.22)); }
 
+/* O raio de precisão do GPS. Fica FORA do `.eu` de propósito: o ponto azul
+   contra-escala para manter o tamanho na tela, e o raio precisa fazer o
+   contrário — ele é uma medida do mundo, em metros, e tem de crescer e encolher
+   junto com o zoom. Raio que não acompanha o mapa não mede nada. */
+.precisao {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(44, 123, 229, 0.10);
+  border: 1px solid rgba(44, 123, 229, 0.28);
+  pointer-events: none;
+  display: none;
+}
+.precisao[data-mostrar="1"] { display: block; }
+
 /* O ponto azul de "você está aqui" */
 .eu { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; transform: scale(calc(1 / var(--z, 1))); }
 .eu__nucleo { position: absolute; inset: 4px; border-radius: 50%; background: #2C7BE5; box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,0.25); }
@@ -1108,8 +1122,13 @@ const Dados = (() => {
   /* ---------------------------------------------------- mundo do mapa */
   // Plano cartesiano em pixels. 120 px = 1 km. O mundo inteiro tem ~28 km.
   const MUNDO = { largura: 4400, altura: 4400, pxPorKm: 120 };
+  /* A posição de quem está olhando. Começa fictícia (a âncora dos dados de
+     demonstração) e é SUBSTITUÍDA pelo GPS quando a pessoa permite.
+     `origem` existe para a tela nunca precisar adivinhar de onde veio o ponto
+     azul — e para nunca dizer "você está aqui" sobre um lugar inventado. */
   const EU = { x: 2000, y: 2100, lat: -30.01382, lng: -51.18227,
-               bairro: 'Higienópolis', cidade: 'Porto Alegre', uf: 'RS' };
+               bairro: 'Higienópolis', cidade: 'Porto Alegre', uf: 'RS',
+               origem: 'ficticia', precisao: null };
 
   /* --------------------------------------------- catálogo de terapias */
   // No app real esta lista é uma tabela controlada pelo admin (arquivo 03),
@@ -1459,6 +1478,35 @@ const Dados = (() => {
     t.iniciais = t.nome.split(' ').filter((p) => p.length > 2).slice(0, 2).map((p) => p[0]).join('');
   });
 
+  /* --------------------------------------------- mudar de onde se olha
+     Trocar a posição NÃO é só mover o ponto azul: toda distância exibida, e a
+     ordem da lista, saem dela. Recalcular aqui, num lugar só, é o que impede a
+     tela de mostrar "2,9 km" para quem está a 400 km. */
+  function recalcularDistancias() {
+    TERAPEUTAS.forEach((t) => {
+      t.distanciaKm = Math.round(distanciaEntre(EU, t) * 10) / 10;
+    });
+  }
+
+  const POSICAO_FICTICIA = { lat: -30.01382, lng: -51.18227,
+                             bairro: 'Higienópolis', cidade: 'Porto Alegre' };
+
+  function definirPosicao({ lat, lng, precisao = null, origem = 'gps', bairro, cidade }) {
+    EU.lat = lat;
+    EU.lng = lng;
+    EU.precisao = precisao;
+    EU.origem = origem;
+    if (bairro !== undefined) EU.bairro = bairro;
+    if (cidade !== undefined) EU.cidade = cidade;
+    Object.assign(EU, paraPlano(lat, lng));   // o mapa desenhado vive no plano
+    recalcularDistancias();
+  }
+
+  function restaurarPosicaoFicticia() {
+    definirPosicao({ ...POSICAO_FICTICIA, origem: 'ficticia', precisao: null });
+  }
+
+
   /* --------------------------------------------------- estado do app */
   // Tudo em memória. Nada é gravado — nem localStorage, como pede o briefing.
   const estado = {
@@ -1620,6 +1668,7 @@ const Dados = (() => {
   return {
     MUNDO, EU, TERAPIAS, DIAS, DIAS_CURTO, TERAPEUTAS, estado,
     ANCORA, paraLatLng, paraPlano, distanciaEntre,
+    definirPosicao, restaurarPosicaoFicticia, recalcularDistancias, POSICAO_FICTICIA,
     agora, estaAberta, proximaAbertura, horariosPorDia, emMinutos,
     listar, filtrosAtivos, porId, distribuicao,
     brl, distancia, haQuanto, duracao, linkZap,
@@ -1848,6 +1897,29 @@ const Mapa = (() => {
       el.querySelectorAll('.pin').forEach((p) => { p.dataset.sel = (p.dataset.id === id ? '1' : '0'); });
     }
 
+    /* Mesmo contrato do mapa real: o ponto azul se move quando o GPS anda.
+       Aqui o raio de precisão vira largura em pixels do plano (120 px = 1 km),
+       que é a única escala que este motor conhece. */
+    function atualizarEu() {
+      const eu = el.querySelector('.eu');
+      if (!eu) return;
+      eu.style.left = Dados.EU.x + 'px';
+      eu.style.top = Dados.EU.y + 'px';
+      const alvo = el.querySelector('.precisao');
+      if (!alvo) return;
+      const m = Dados.EU.precisao || 0;
+      const raio = (m / 1000) * Dados.MUNDO.pxPorKm;   // 120 px = 1 km
+      if (raio > 11) {
+        alvo.dataset.mostrar = '1';
+        alvo.style.left = (Dados.EU.x - raio) + 'px';
+        alvo.style.top = (Dados.EU.y - raio) + 'px';
+        alvo.style.width = (raio * 2) + 'px';
+        alvo.style.height = (raio * 2) + 'px';
+      } else {
+        alvo.dataset.mostrar = '0';
+      }
+    }
+
     function definirOffsetBaixo(v) { offsetBaixo = v; }
     function definirOffsetTopo(v) { offsetTopo = v; }
 
@@ -2032,7 +2104,7 @@ const Mapa = (() => {
       ampliarNoPonto(el.getBoundingClientRect().left + w / 2, el.getBoundingClientRect().top + offsetTopo + (h - offsetTopo - offsetBaixo) / 2, fator);
     }
 
-    return { motor: 'desenhado', centralizar, centralizarPlano, paraTela, atualizarPins, selecionar,
+    return { motor: 'desenhado', centralizar, centralizarPlano, paraTela, atualizarPins, selecionar, atualizarEu,
              definirOffsetBaixo, definirOffsetTopo, ajustarZoom, pintar, destruir() {},
              get zoom() { return z; } };
   }
@@ -2148,9 +2220,84 @@ const MapaReal = (() => {
       eu.style.position = 'relative';
       eu.style.margin = '0';
       eu.innerHTML = '<div class="eu__halo"></div><div class="eu__nucleo"></div>';
-      new maplibregl.Marker({ element: eu, anchor: 'center' })
+      marcadorEu = new maplibregl.Marker({ element: eu, anchor: 'center' })
         .setLngLat([Dados.EU.lng, Dados.EU.lat])
         .addTo(mapa);
+
+      /* O CÍRCULO DE PRECISÃO é medido, não decorativo.
+
+         O GPS não devolve um ponto, devolve um ponto E um raio. Desenhar só o
+         ponto afirma uma certeza que o aparelho não tem — e num app cuja
+         pergunta é "quem está perto de mim", 30 m e 2 km mudam a resposta.
+
+         O raio vem em METROS e o mapa desenha em PIXELS, e a conversão depende
+         do zoom e da latitude:  px = m · 2^zoom / (156543,03 · cos(lat)).
+
+         ⚠️ Escrever essa conta direto (`['*', raio, ['^', 2, ['zoom']]]`) o
+         MapLibre RECUSA: "zoom" só pode ser a entrada de um `interpolate` ou
+         `step` de topo. A forma aceita é um `interpolate` exponencial de base
+         2 entre os zooms extremos — que dá exatamente 2^zoom, escrito do jeito
+         que o motor entende. */
+      mapa.addSource('precisao', { type: 'geojson', data: pontoPrecisao() });
+      mapa.addLayer({
+        id: 'precisao',
+        type: 'circle',
+        source: 'precisao',
+        paint: {
+          'circle-color': '#2C7BE5',
+          'circle-opacity': 0.10,
+          'circle-stroke-color': '#2C7BE5',
+          'circle-stroke-opacity': 0.28,
+          'circle-stroke-width': 1,
+          'circle-radius': raioEmPixels(),
+        },
+      }, mapa.getStyle().layers[mapa.getStyle().layers.length - 1].id);
+      atualizarPrecisao();
+    }
+
+    let marcadorEu = null;
+
+    /* O raio, em pixels, para cada zoom.
+
+       Como existe UM ponto só, a conta cabe em JavaScript e a camada recebe
+       números puros — em vez de ler o raio de dentro do dado
+       (`['get','porPixel']`). Menos expressão, menos superfície para errar.
+
+       ⚠️ NOTA sobre um aviso do console que NÃO é nosso: aparece repetido um
+       "Expected value to be of type number, but found null". Eu quase reescrevi
+       esta camada por causa dele. `teste/sonda-estilo-puro.js` sobe o MapLibre
+       com o estilo positron SEM UMA LINHA do projeto e o aviso aparece igual:
+       ele vem do estilo do OpenFreeMap. Antes de consertar um aviso, descobrir
+       de quem ele é — senão conserta-se o que não está quebrado. */
+    function raioEmPixels() {
+      const m = Dados.EU.precisao || 0;
+      const metrosPorPixelNoZoom0 = 156543.03392 * Math.cos((Dados.EU.lat * Math.PI) / 180);
+      const base = m > 0 ? m / metrosPorPixelNoZoom0 : 0;
+      return ['interpolate', ['exponential', 2], ['zoom'],
+              0, base, 22, base * 4194304];      // 2^22
+    }
+
+    function pontoPrecisao() {
+      return {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [Dados.EU.lng, Dados.EU.lat] },
+        properties: {},
+      };
+    }
+
+    function atualizarPrecisao() {
+      const f = mapa.getSource('precisao');
+      if (!f) return;
+      f.setData(pontoPrecisao());
+      if (mapa.getLayer('precisao')) {
+        mapa.setPaintProperty('precisao', 'circle-radius', raioEmPixels());
+      }
+    }
+
+    /* Chamado quando o GPS reporta um passo novo. */
+    function atualizarEu() {
+      if (marcadorEu) marcadorEu.setLngLat([Dados.EU.lng, Dados.EU.lat]);
+      atualizarPrecisao();
     }
 
     /* O filtro não destrói e recria marcador: só apaga o que saiu da busca.
@@ -2194,6 +2341,7 @@ const MapaReal = (() => {
       motor: 'real',
       centralizar,
       atualizarPins,
+      atualizarEu,
       selecionar,
       definirOffsetBaixo: (v) => { offsetBaixo = v; },
       definirOffsetTopo: (v) => { offsetTopo = v; },
@@ -2237,6 +2385,163 @@ const MapaReal = (() => {
   }
 
   return { disponivel, montar, montarMini, ESTILO, NIVEL };
+})();
+
+
+/* ==========================================================================
+   04c-gps.js
+   ========================================================================== */
+/* ============================================================================
+   04c-gps.js — onde a pessoa está DE VERDADE
+
+   Até aqui o ponto azul era ficção: "Permitir localização" só centralizava o
+   mapa num ponto cravado em Higienópolis e o aparelho nunca era consultado.
+   Servia enquanto o mapa também era desenhado. Com ruas reais, um ponto azul
+   que mente é pior que ponto azul nenhum.
+
+   OS ESTADOS QUE A REALIDADE IMPÕE
+   --------------------------------
+   Pedir localização não tem duas respostas (sim/não), tem seis — e cada uma
+   precisa de uma tela diferente:
+
+     1. o navegador nem oferece      → contexto inseguro, ou aparelho velho
+     2. a pessoa nega                → tem de haver caminho sem GPS
+     3. a pessoa ignora o aviso      → fica pendurado; daí o `timeout`
+     4. o aparelho não consegue      → GPS desligado, dentro de prédio
+     5. consegue, mas impreciso      → 2 km de raio não é "onde você está"
+     6. consegue e é preciso         → o único caso que costuma ser programado
+
+   ⚠️ CONTEXTO SEGURO É OBRIGATÓRIO. `navigator.geolocation` só existe em https
+   ou localhost. Abrir o `index.html` com duplo clique (`file://`) NÃO dá GPS —
+   e isso não é defeito, é o navegador protegendo quem abre um arquivo qualquer.
+   Por isso `disponivel()` confere `isSecureContext` antes de prometer.
+   ========================================================================= */
+const Gps = (() => {
+
+  /* Precisão pior que isto não é localização, é bairro. O aviso ao usuário
+     muda: dizer "você está aqui" com 3 km de erro é mentir com confiança. */
+  const PRECISAO_RUIM_M = 1500;
+
+  /* Os dados de demonstração vivem na Grande Porto Alegre. Quem estiver mais
+     longe que isto veria um mapa vazio e concluiria que o app não funciona —
+     quando o que falta é terapeuta cadastrada, não localização. */
+  const LONGE_DEMAIS_KM = 60;
+
+  function disponivel() {
+    return typeof navigator !== 'undefined'
+        && 'geolocation' in navigator
+        && (window.isSecureContext || location.protocol === 'https:');
+  }
+
+  /* Por que não dá para prometer GPS aqui: a razão, em português, para caber
+     na tela sem virar "erro 2". */
+  function motivoIndisponivel() {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      return 'Este navegador não oferece localização.';
+    }
+    if (location.protocol === 'file:') {
+      return 'Abrindo o arquivo direto do computador, o navegador bloqueia a localização. '
+           + 'Pelo endereço na internet ela funciona.';
+    }
+    return 'A localização não está disponível aqui.';
+  }
+
+  /* ------------------------------------------------------------- pedir */
+  /*
+     `enableHighAccuracy` liga o GPS do aparelho em vez de só a rede. Custa
+     bateria e tempo — e é a diferença entre "seu bairro" e "sua rua", que é
+     justamente o que este app precisa.
+
+     `maximumAge: 60000` aceita uma posição de até um minuto atrás: quem acabou
+     de abrir o mapa de outro app já tem uma leitura boa, e reusá-la evita
+     segurar a pessoa esperando o satélite.
+  */
+  function pedir({ aoObter, aoFalhar, tempoLimite = 12000 }) {
+    if (!disponivel()) {
+      aoFalhar({ tipo: 'indisponivel', mensagem: motivoIndisponivel() });
+      return;
+    }
+
+    let respondeu = false;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (respondeu) return;
+        respondeu = true;
+        aoObter({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          precisao: Math.round(pos.coords.accuracy || 0),
+          imprecisa: (pos.coords.accuracy || 0) > PRECISAO_RUIM_M,
+        });
+      },
+      (erro) => {
+        if (respondeu) return;
+        respondeu = true;
+        // Os códigos são 1, 2 e 3. Ninguém entende "erro 2" — cada um vira frase.
+        const mapa = {
+          1: { tipo: 'negado', mensagem: 'Você não permitiu o acesso à localização.' },
+          2: { tipo: 'falhou', mensagem: 'O aparelho não conseguiu obter a localização agora. '
+                                       + 'Perto de uma janela ou ao ar livre costuma resolver.' },
+          3: { tipo: 'demorou', mensagem: 'A localização está demorando demais para responder.' },
+        };
+        aoFalhar(mapa[erro && erro.code] || { tipo: 'falhou', mensagem: 'Não deu para obter a localização.' });
+      },
+      { enableHighAccuracy: true, timeout: tempoLimite, maximumAge: 60000 }
+    );
+  }
+
+  /* --------------------------------------------------- acompanhar o passo */
+  /* Quem anda com o app aberto espera o ponto azul acompanhar. `watchPosition`
+     faz isso — e devolve uma função de PARAR, que tem de ser chamada ao sair do
+     mapa: um observador esquecido é bateria consumida com a tela em outra aba. */
+  function acompanhar(aoMover) {
+    if (!disponivel()) return () => {};
+    const id = navigator.geolocation.watchPosition(
+      (pos) => aoMover({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        precisao: Math.round(pos.coords.accuracy || 0),
+        imprecisa: (pos.coords.accuracy || 0) > PRECISAO_RUIM_M,
+      }),
+      () => {},                                   // falha em observação é silêncio
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+    );
+    return () => { try { navigator.geolocation.clearWatch(id); } catch (_) {} };
+  }
+
+  /* ------------------------------------------------ longe dos dados? */
+  /* Uma pessoa em Recife abriria o app, veria o mapa da rua dela e ZERO
+     terapeutas — e concluiria que está quebrado. Está certo: as 12 são ficção
+     e moram na Grande Porto Alegre. Dizer isso é melhor que deixar deduzir. */
+  function longeDosDados(lat, lng) {
+    const d = Dados.distanciaEntre({ lat, lng }, Dados.ANCORA);
+    return { longe: d > LONGE_DEMAIS_KM, km: Math.round(d) };
+  }
+
+  /* ----------------------------------------- que lugar é este? (opcional) */
+  /* Só para escrever "Petrópolis, Porto Alegre" em vez de dois números na tela
+     da conta. Falha em silêncio de propósito: é enfeite, não pode segurar nada.
+
+     Uma consulta por vez, com identificação — a política do Nominatim é a mesma
+     do geocodificador de bairros. */
+  function ondeEstou(lat, lng, aoSaber) {
+    const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14'
+              + `&lat=${lat}&lon=${lng}`;
+    fetch(url, { headers: { 'Accept-Language': 'pt-BR' } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d || !d.address) return;
+        const a = d.address;
+        aoSaber({
+          bairro: a.suburb || a.neighbourhood || a.city_district || a.town || a.village || '',
+          cidade: a.city || a.town || a.municipality || a.county || '',
+        });
+      })
+      .catch(() => {});
+  }
+
+  return { disponivel, motivoIndisponivel, pedir, acompanhar, longeDosDados, ondeEstou, PRECISAO_RUIM_M };
 })();
 
 
@@ -2539,11 +2844,23 @@ const Telas = (() => {
     </div>`;
   }
 
-  function cidades() {
+  function cidades(motivo) {
     const lista = ['Porto Alegre', 'Canoas', 'Cachoeirinha', 'Gravataí', 'Viamão', 'Alvorada', 'São Leopoldo', 'Novo Hamburgo'];
+    /* Chegar aqui sem saber POR QUE é desnorteante — a pessoa tocou em
+       "Permitir" e foi parar noutra tela. O aviso some em segundos; a
+       explicação tem de ficar. */
+    const explicacao = motivo ? `
+      <div class="cartao cartao--plano mb16" style="background:var(--alerta-fundo);border:0">
+        <div class="linha" style="align-items:flex-start">
+          <span style="color:#9A4C31;flex:none">${ic('info', 19)}</span>
+          <p class="pequeno" style="color:#9A4C31">${esc(motivo)}<br>
+            <b>Escolher a cidade resolve:</b> o app funciona igual, só não centraliza sozinho.</p>
+        </div>
+      </div>` : '';
     return `<div class="tela" data-tela="cidades">
       ${cabecalho('Escolher cidade', { sub: 'Sem localização, tudo funciona igual' })}
       <div class="rolar pl pr">
+        ${explicacao}
         ${lista.map((c) => `
           <button class="cartao cartao--plano mb8" style="width:100%;text-align:left" data-a="definirCidade" data-cidade="${c}">
             <div class="entre">
@@ -2590,6 +2907,7 @@ const Telas = (() => {
           ${Mapa.gerarSVG()}
           ${Mapa.rotulos()}
           <div id="pins">${pinsHTML()}</div>
+          <div class="precisao"></div>
           <div class="eu" style="left:${Dados.EU.x}px;top:${Dados.EU.y}px">
             <div class="eu__halo"></div><div class="eu__nucleo"></div>
           </div>
@@ -2934,6 +3252,18 @@ const Telas = (() => {
       </div>`;
   }
 
+  /* A tela nunca deve afirmar "você está aqui" sobre um ponto inventado.
+     `origem` diz de onde veio, e o texto muda com ela. */
+  function localizacaoEmTexto() {
+    const e = Dados.estado;
+    if (e.localizacao !== 'concedida' || Dados.EU.origem !== 'gps') {
+      return `Desligada — usando ${esc(e.cidadeEscolhida || Dados.EU.cidade)}`;
+    }
+    const onde = [Dados.EU.bairro, Dados.EU.cidade].filter(Boolean).join(', ');
+    const erro = Dados.EU.precisao ? ` · ±${Dados.EU.precisao} m` : '';
+    return `${esc(onde)}${erro}`;
+  }
+
   /* --- minha conta ------------------------------------------------------- */
   function abaConta() {
     const e = Dados.estado;
@@ -2956,14 +3286,14 @@ const Telas = (() => {
             <div class="cresce">
               <p class="t1">${esc(e.nomeUsuario)}</p>
               <p class="pequeno dim">${e.entrouPor === 'google' ? 'Entrou com o Google' : `Celular ${esc(e.celular || '')}`}</p>
-              <p class="pequeno dim">${e.localizacao === 'concedida' ? `${Dados.EU.bairro}, ${Dados.EU.cidade}` : `Cidade: ${esc(e.cidadeEscolhida || '—')}`}</p>
+              <p class="pequeno dim">${localizacaoEmTexto()}</p>
             </div>
           </div>
         </div>
 
         <h3 class="micro dim mt24 mb8">Privacidade</h3>
         <div class="cartao" style="padding:0 16px">
-          ${linha('local', 'Localização', e.localizacao === 'concedida' ? 'Usada só na busca, nunca gravada' : 'Desligada — usando cidade', 'alternarLocal')}
+          ${linha('local', 'Localização', localizacaoEmTexto(), 'alternarLocal')}
           ${linha('saida', 'Exportar meus dados', 'Receber uma cópia em e-mail', 'exportar')}
           ${linha('lixo', 'Excluir minha conta', 'Apaga tudo, sem volta', 'excluirConta', 'var(--alerta)')}
         </div>
@@ -3398,7 +3728,7 @@ const Telas = (() => {
   return {
     esc, ic, svg, ICONES, avatar, estrelas, lotus, cabecalho, cartaoTerapeuta, selo, ondeFica, pinsHTML, pinoHTML, pinoSimplesHTML,
     entrar, telefone, codigo, papel, localizacao, cidades,
-    raizCliente, abaMapa, abaLista, abaFavoritas, abaConta, barraAbas,
+    raizCliente, abaMapa, abaLista, abaFavoritas, abaConta, barraAbas, localizacaoEmTexto,
     folhaResumo, perfil, avaliar, filtros, denunciar, barraBusca, chipsFiltro, vazioBusca,
     raizTerapeuta, barraAbasTerapeuta, assistente, passo, abaMeuPerfil, abaAvaliacoesT,
     abaPainel, responder, perfilComoTerapeuta, PASSOS,
@@ -3430,7 +3760,7 @@ const App = (() => {
       case 'codigo':      return Telas.codigo();
       case 'papel':       return Telas.papel();
       case 'localizacao': return Telas.localizacao();
-      case 'cidades':     return Telas.cidades();
+      case 'cidades':     return Telas.cidades(p.motivo);
       case 'raiz':        return Telas.raizCliente();
       case 'raizT':       return Telas.raizTerapeuta();
       case 'perfil':      return Telas.perfil(Dados.porId(p.id));
@@ -3617,6 +3947,7 @@ const App = (() => {
       // O MapLibre segura contexto de GPU e ouvintes: sair da aba sem descartar
       // deixa um mapa invisível vivo, e outro nasce na volta.
       if (mapaCtrl && mapaCtrl.destruir) mapaCtrl.destruir();
+      if (pararDeSeguir) { pararDeSeguir(); pararDeSeguir = null; }
       mapaCtrl = null; folha = null;
     }
     if (E.aba === 'meuPerfil' || E.aba === 'mapa') montarMinimapas(cx);
@@ -3660,6 +3991,7 @@ const App = (() => {
 
     mapaCtrl.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao', false);
     ligarFolha();
+    if (E.localizacao === 'concedida' && Dados.EU.origem === 'gps') seguirPosicao();
   }
 
   function selecionarPin(id, animar = true) {
@@ -3961,6 +4293,93 @@ const App = (() => {
     }
   }
 
+  /* =============================================== localização de verdade */
+  /*
+     Pedir GPS não é um sim/não: é uma espera que pode acabar de seis jeitos
+     (ver src/04c-gps.js). Cada um precisa de uma tela — e a pior resposta
+     possível é o botão ficar mudo enquanto o aparelho procura satélite.
+  */
+  let pararDeSeguir = null;
+
+  function pedirLocalizacao(botao) {
+    if (!Gps.disponivel()) {
+      // Não prometer o que o navegador não oferece. Explica e abre o caminho
+      // sem GPS, em vez de deixar a pessoa tocando num botão que nunca responde.
+      avisar(Gps.motivoIndisponivel(), 'info');
+      setTimeout(() => abrir('cidades', { motivo: Gps.motivoIndisponivel() }), 900);
+      return;
+    }
+
+    const original = botao ? botao.innerHTML : '';
+    if (botao) {
+      botao.disabled = true;
+      botao.innerHTML = `${Telas.ic('mira', 20)} Procurando você…`;
+    }
+    const restaurar = () => { if (botao) { botao.disabled = false; botao.innerHTML = original; } };
+
+    Gps.pedir({
+      aoObter: (pos) => {
+        restaurar();
+        Dados.definirPosicao({ lat: pos.lat, lng: pos.lng, precisao: pos.precisao,
+                               origem: 'gps', bairro: 'Sua localização', cidade: '' });
+        E.localizacao = 'concedida';
+        trocarRaiz('raiz');
+
+        /* Quem está longe da Grande Porto Alegre veria o mapa da própria rua e
+           ZERO terapeutas — e concluiria que o app está quebrado. Está certo:
+           as 12 são ficção e moram aqui. Dizer isso é melhor que deixar deduzir. */
+        const d = Gps.longeDosDados(pos.lat, pos.lng);
+        if (d.longe) {
+          setTimeout(() => perguntar(
+            'Você está longe das terapeutas de teste',
+            `Este protótipo tem 12 terapeutas fictícias, todas na Grande Porto Alegre — `
+            + `a ${d.km} km de você. Quer ver o mapa de lá para conhecer o app?`,
+            'Ver a região de teste',
+            () => { Dados.restaurarPosicaoFicticia(); E.localizacao = 'cidade'; renderAba();
+                    if (mapaCtrl) { mapaCtrl.atualizarEu(); mapaCtrl.atualizarPins();
+                                    mapaCtrl.centralizar(Dados.EU.lat, Dados.EU.lng, 'regiao', false); } }
+          ), 700);
+          return;
+        }
+
+        avisar(pos.imprecisa
+          ? `Localização aproximada (±${pos.precisao} m). Perto de uma janela melhora.`
+          : 'Prontinho — este é o seu mapa', 'local');
+
+        seguirPosicao();
+        nomearLugar(pos.lat, pos.lng);
+      },
+      aoFalhar: (erro) => {
+        restaurar();
+        avisar(erro.mensagem, 'info');
+        // Negou ou falhou: o app CONTINUA. O modo cidade existe para isto.
+        setTimeout(() => abrir('cidades', { motivo: erro.mensagem }), 1100);
+      },
+    });
+  }
+
+  /* O ponto azul acompanha quem anda. O observador é parado ao sair do mapa —
+     esquecido, ele consome bateria com o app em outra tela. */
+  function seguirPosicao() {
+    if (pararDeSeguir) pararDeSeguir();
+    pararDeSeguir = Gps.acompanhar((pos) => {
+      Dados.definirPosicao({ lat: pos.lat, lng: pos.lng, precisao: pos.precisao, origem: 'gps' });
+      if (mapaCtrl && mapaCtrl.atualizarEu) mapaCtrl.atualizarEu();
+      if (E.modo === 'lista') renderAba();     // a lista é ordenada por distância
+    });
+  }
+
+  /* Enfeite honesto: troca dois números por "Petrópolis, Porto Alegre" na tela
+     da conta. Falha em silêncio — não pode segurar nada. */
+  function nomearLugar(lat, lng) {
+    Gps.ondeEstou(lat, lng, (lugar) => {
+      if (!lugar.bairro && !lugar.cidade) return;
+      Dados.EU.bairro = lugar.bairro || 'Sua localização';
+      Dados.EU.cidade = lugar.cidade || '';
+      if (E.aba === 'conta') renderAba();
+    });
+  }
+
   /* ---------------------------------------------- tela do código SMS */
   function ligarCodigo(el) {
     const campos = Array.from(el.querySelectorAll('.digito'));
@@ -4080,14 +4499,11 @@ const App = (() => {
         else { E.aba = 'meuPerfil'; E.passo = 0; abrir('assistente'); }
         break;
 
-      case 'permitirLocal':
-        E.localizacao = 'concedida';
-        trocarRaiz('raiz');
-        avisar(`Prontinho — você está em ${Dados.EU.bairro}`, 'local');
-        break;
+      case 'permitirLocal': pedirLocalizacao(el); break;
       case 'escolherCidade': abrir('cidades'); break;
       case 'definirCidade':
         E.localizacao = 'cidade'; E.cidadeEscolhida = el.dataset.cidade;
+        Dados.restaurarPosicaoFicticia();
         trocarRaiz('raiz');
         avisar(`Mostrando terapeutas de ${el.dataset.cidade}`, 'local');
         break;
@@ -4189,10 +4605,18 @@ const App = (() => {
       case 'verTermos': case 'verPrivacidade':
         avisar('No app real, abre o documento completo.', 'info'); break;
       case 'alternarLocal':
-        E.localizacao = E.localizacao === 'concedida' ? 'cidade' : 'concedida';
-        if (E.localizacao === 'cidade' && !E.cidadeEscolhida) E.cidadeEscolhida = Dados.EU.cidade;
-        renderAba();
-        avisar(E.localizacao === 'concedida' ? 'Localização ligada' : 'Localização desligada — usando a cidade', 'local');
+        if (E.localizacao === 'concedida') {
+          if (pararDeSeguir) { pararDeSeguir(); pararDeSeguir = null; }
+          Dados.restaurarPosicaoFicticia();
+          E.localizacao = 'cidade';
+          if (!E.cidadeEscolhida) E.cidadeEscolhida = Dados.EU.cidade;
+          renderAba();
+          avisar('Localização desligada — usando a cidade', 'local');
+        } else {
+          // Religar é pedir de novo ao aparelho, não trocar uma variável:
+          // o navegador pode ter tido a permissão revogada desde então.
+          pedirLocalizacao(el);
+        }
         break;
       case 'exportar': avisar('Enviaremos a cópia dos seus dados por e-mail.', 'saida'); break;
       case 'excluirConta':

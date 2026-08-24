@@ -14,7 +14,9 @@ const ARQUIVO = 'file:///' + path.join(__dirname, '..', 'prototipo', 'index.html
   await p.waitForSelector('#splash', { state: 'detached' }).catch(() => {});
   await p.click('[data-a="entrarGoogle"]'); await p.waitForTimeout(400);
   await p.click('[data-papel="cliente"]'); await p.waitForTimeout(400);
-  await p.click('[data-a="permitirLocal"]'); await p.waitForTimeout(1200);
+  // Sem GPS concedido, 'Permitir' faz o certo e oferece a cidade.
+  await p.click('[data-a="escolherCidade"]'); await p.waitForTimeout(500);
+  await p.click('[data-a="definirCidade"][data-cidade="Porto Alegre"]'); await p.waitForTimeout(1400);
 
   console.log('motor:', await p.evaluate(() => App.mapa && App.mapa.motor));
 

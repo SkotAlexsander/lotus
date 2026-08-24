@@ -9,8 +9,13 @@ const Dados = (() => {
   /* ---------------------------------------------------- mundo do mapa */
   // Plano cartesiano em pixels. 120 px = 1 km. O mundo inteiro tem ~28 km.
   const MUNDO = { largura: 4400, altura: 4400, pxPorKm: 120 };
+  /* A posição de quem está olhando. Começa fictícia (a âncora dos dados de
+     demonstração) e é SUBSTITUÍDA pelo GPS quando a pessoa permite.
+     `origem` existe para a tela nunca precisar adivinhar de onde veio o ponto
+     azul — e para nunca dizer "você está aqui" sobre um lugar inventado. */
   const EU = { x: 2000, y: 2100, lat: -30.01382, lng: -51.18227,
-               bairro: 'Higienópolis', cidade: 'Porto Alegre', uf: 'RS' };
+               bairro: 'Higienópolis', cidade: 'Porto Alegre', uf: 'RS',
+               origem: 'ficticia', precisao: null };
 
   /* --------------------------------------------- catálogo de terapias */
   // No app real esta lista é uma tabela controlada pelo admin (arquivo 03),
@@ -360,6 +365,35 @@ const Dados = (() => {
     t.iniciais = t.nome.split(' ').filter((p) => p.length > 2).slice(0, 2).map((p) => p[0]).join('');
   });
 
+  /* --------------------------------------------- mudar de onde se olha
+     Trocar a posição NÃO é só mover o ponto azul: toda distância exibida, e a
+     ordem da lista, saem dela. Recalcular aqui, num lugar só, é o que impede a
+     tela de mostrar "2,9 km" para quem está a 400 km. */
+  function recalcularDistancias() {
+    TERAPEUTAS.forEach((t) => {
+      t.distanciaKm = Math.round(distanciaEntre(EU, t) * 10) / 10;
+    });
+  }
+
+  const POSICAO_FICTICIA = { lat: -30.01382, lng: -51.18227,
+                             bairro: 'Higienópolis', cidade: 'Porto Alegre' };
+
+  function definirPosicao({ lat, lng, precisao = null, origem = 'gps', bairro, cidade }) {
+    EU.lat = lat;
+    EU.lng = lng;
+    EU.precisao = precisao;
+    EU.origem = origem;
+    if (bairro !== undefined) EU.bairro = bairro;
+    if (cidade !== undefined) EU.cidade = cidade;
+    Object.assign(EU, paraPlano(lat, lng));   // o mapa desenhado vive no plano
+    recalcularDistancias();
+  }
+
+  function restaurarPosicaoFicticia() {
+    definirPosicao({ ...POSICAO_FICTICIA, origem: 'ficticia', precisao: null });
+  }
+
+
   /* --------------------------------------------------- estado do app */
   // Tudo em memória. Nada é gravado — nem localStorage, como pede o briefing.
   const estado = {
@@ -521,6 +555,7 @@ const Dados = (() => {
   return {
     MUNDO, EU, TERAPIAS, DIAS, DIAS_CURTO, TERAPEUTAS, estado,
     ANCORA, paraLatLng, paraPlano, distanciaEntre,
+    definirPosicao, restaurarPosicaoFicticia, recalcularDistancias, POSICAO_FICTICIA,
     agora, estaAberta, proximaAbertura, horariosPorDia, emMinutos,
     listar, filtrosAtivos, porId, distribuicao,
     brl, distancia, haQuanto, duracao, linkZap,
