@@ -142,9 +142,12 @@ const Telas = (() => {
   }
 
   /* Cartão de terapeuta usado na lista, nas favoritas e na busca */
-  function cartaoTerapeuta(t) {
+  // O 2º parâmetro vem de graça do .map(): é o índice, usado só para o
+  // escalonamento da entrada (--i limita em 6 — depois da 7ª carta, escalonar
+  // mais é atraso, não coreografia).
+  function cartaoTerapeuta(t, i = 0) {
     const fav = Dados.estado.favoritos.has(t.id);
-    return `<article class="cartao mb12" data-a="abrirPerfil" data-id="${t.id}" role="button" tabindex="0">
+    return `<article class="cartao mb12" data-a="abrirPerfil" data-id="${t.id}" role="button" tabindex="0" style="--i:${Math.min(i, 6)}">
       <div class="linha" style="align-items:flex-start">
         ${avatar(t, 60)}
         <div class="cresce">

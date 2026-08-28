@@ -110,6 +110,13 @@ velocidade do dedo e projeta o momento para onde ele estava mandando a coisa. É
 que faz o mapa, a folha e o gesto de voltar responderem como objeto e não como
 página.
 
+E o movimento decorativo segue uma regra só: **um momento-herói, o resto é apoio.**
+O herói é a abertura — a flor de lótus desabrocha pétala por pétala, do miolo para
+fora, e o título entra depois dela, na ordem de leitura. O apoio: cartão aperta um
+fio sob o dedo, coração favoritado pulsa uma vez, lista surge escalonada. Tudo só
+`transform` e `opacity`, e tudo morre com `prefers-reduced-motion` — quem pediu
+menos movimento recebe o app inteiro, parado.
+
 ```
 src/                  onde se edita — a numeração é a ORDEM DE CARGA
   00-molde.html         esqueleto e tela de abertura

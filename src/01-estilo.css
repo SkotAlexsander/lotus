@@ -49,9 +49,25 @@
   --r-pilula: 999px;
 
   /* Sombras suaves, em camadas */
-  --sombra-1: 0 1px 2px rgba(43, 33, 64, 0.05), 0 2px 8px rgba(43, 33, 64, 0.04);
-  --sombra-2: 0 2px 6px rgba(43, 33, 64, 0.06), 0 8px 24px rgba(43, 33, 64, 0.08);
-  --sombra-3: 0 4px 12px rgba(43, 33, 64, 0.08), 0 18px 48px rgba(43, 33, 64, 0.14);
+  /* Sombras em RAMPA: um anel de 1px que faz o papel de borda + camadas que
+     dobram de tamanho com alfa constante e baixo. Uma camada só parece
+     adesivo; a rampa parece luz. Mesmo matiz violeta do resto — sombra
+     cinza-pura esfria a paleta creme. */
+  --sombra-1: 0 0 0 1px rgba(43, 33, 64, 0.04),
+              0 1px 1px -0.5px rgba(43, 33, 64, 0.04),
+              0 3px 3px -1.5px rgba(43, 33, 64, 0.04),
+              0 6px 6px -3px rgba(43, 33, 64, 0.04);
+  --sombra-2: 0 0 0 1px rgba(43, 33, 64, 0.05),
+              0 1px 1px -0.5px rgba(43, 33, 64, 0.05),
+              0 3px 3px -1.5px rgba(43, 33, 64, 0.05),
+              0 6px 6px -3px rgba(43, 33, 64, 0.05),
+              0 12px 12px -6px rgba(43, 33, 64, 0.05);
+  --sombra-3: 0 0 0 1px rgba(43, 33, 64, 0.05),
+              0 3px 2px rgba(43, 33, 64, 0.03),
+              0 7px 5px rgba(43, 33, 64, 0.04),
+              0 13px 10px rgba(43, 33, 64, 0.05),
+              0 22px 18px rgba(43, 33, 64, 0.06),
+              0 42px 34px rgba(43, 33, 64, 0.08);
   --sombra-pin: 0 3px 8px rgba(43, 33, 64, 0.28);
 
   /* Escala de texto — respeita o ajuste do sistema (Dynamic Type) */
@@ -752,7 +768,55 @@ a { color: inherit; }
 .splash p { color: rgba(255,255,255,0.82); }
 
 .lotus { margin: 0 auto 22px; width: max-content; }
-.lotus svg { margin: 0 auto; }
+.lotus svg {
+  margin: 0 auto;
+  /* Profundidade contra o violeta — barata: um filtro pequeno num SVG pequeno */
+  filter: drop-shadow(0 12px 26px rgba(18, 10, 38, 0.38));
+}
+/* Respiração depois do desabrochar. O bloco de movimento reduzido (seção 19)
+   zera a duração e o loop de toda animação — inclusive esta. */
+.splash .lotus svg { animation: lotus-respira 3.4s ease-in-out 1.35s infinite; }
+@keyframes lotus-respira {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.022); }
+}
+
+/* --------------------------------------- 18b. MOVIMENTO DE APOIO
+   Regra da casa (via skill animation-systems): UM momento-herói — a flor
+   desabrochando na abertura (coreografada em 06-app.js) — e o resto é apoio:
+   confirmar ação, dar ordem de leitura, nada de enfeite. Só transform e
+   opacity; nada de animar layout. Tudo morre no movimento reduzido (seção 19). */
+
+/* Toque tem resposta física: aperta, encolhe um fio. */
+.btn, .chip, .redondo, .opcao, .aba, .cartao[data-a] {
+  transition: transform 130ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.btn:active, .chip:active, .redondo:active, .opcao:active, .cartao[data-a]:active {
+  transform: scale(0.97);
+}
+.aba:active { transform: scale(0.94); }
+
+/* Entrada de lista: surgir + subir, escalonado pela ordem (--i vem do template,
+   limitado a 6). `backwards` segura invisível durante o próprio atraso. */
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+#conteudoAba .cartao {
+  animation: surgir 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+/* Confirmação pontual: coração favoritado e estrela escolhida dão um pulso. */
+@keyframes pulso-confirma {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.24); }
+  100% { transform: scale(1); }
+}
+.redondo[aria-pressed="true"] svg,
+.seletor-estrelas button[data-on="1"] svg {
+  animation: pulso-confirma 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
 
 /* --------------------------------------------- 19. PREFERÊNCIAS DO SISTEMA */
 

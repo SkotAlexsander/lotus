@@ -1266,12 +1266,56 @@ const App = (() => {
         { duration: 620, easing: 'cubic-bezier(.4,0,.2,1)' });
       a.onfinish = () => splash.remove();
     };
-    setTimeout(sair, 1500);
+    // 1900 e não 1500: o desabrochar termina ~940ms e o título ~1100ms —
+    // sair a 1500 cortava o momento no meio. Movimento reduzido não espera
+    // nada disso: o `sair` remove na hora.
+    setTimeout(sair, Fisica.menosMovimento() ? 900 : 1900);
 
     if (!Fisica.menosMovimento()) {
-      const c = splash.querySelector('.splash__conteudo');
-      c.animate([{ opacity: 0, transform: 'translateY(18px) scale(0.96)' }, { opacity: 1, transform: 'none' }],
-        { duration: 900, easing: 'cubic-bezier(.2,.9,.3,1)' });
+      /* A flor DESABROCHA em vez de o bloco inteiro surgir de uma vez.
+         Coreografia com ordem de leitura: pétala do meio → pares de fora →
+         base → título → subtítulo. Cada pétala nasce fechada (rotação 0, por
+         cima da central) e gira até o ângulo dela — o ângulo final vem do
+         próprio atributo `transform`, então mudar o desenho não quebra a
+         animação. Ao terminar, o CSS devolve o controle ao atributo: mesmo
+         valor, nenhum salto. */
+      const suave = 'cubic-bezier(.2,.9,.3,1)';
+      /* As pétalas giram pelo ATRIBUTO `rotate(a 32 46)` — o mesmo espaço de
+         unidades do desenho. Girar por CSS transform aqui quebrava: o
+         transform-origin em px não era lido em unidades do viewBox e as
+         pétalas varriam para fora do quadro, viravam fragmentos cortados
+         (medido em foto na bancada, aos 520ms). */
+      const saidaCubica = (t) => 1 - Math.pow(1 - t, 3);
+      splash.querySelectorAll('.lotus path').forEach((petala) => {
+        const m = /rotate\((-?\d+(?:\.\d+)?)/.exec(petala.getAttribute('transform') || '');
+        const alvo = m ? Number(m[1]) : 0;
+        const opacidade = Number(petala.getAttribute('opacity') || 1);
+        const atraso = Math.abs(alvo) * 3.2, dur = 700;
+        petala.style.opacity = '0';
+        const inicio = performance.now() + atraso;
+        const quadro = (agora) => {
+          const t = Math.min(1, Math.max(0, (agora - inicio) / dur));
+          const e = saidaCubica(t);
+          petala.setAttribute('transform', `rotate(${alvo * e} 32 46)`);
+          petala.style.opacity = String(opacidade * Math.min(1, e * 1.6));
+          if (t < 1) requestAnimationFrame(quadro);
+          else { petala.style.opacity = ''; }   // o atributo volta a mandar
+        };
+        requestAnimationFrame(quadro);
+      });
+      const base = splash.querySelector('.lotus ellipse');
+      if (base) base.animate([{ opacity: 0 }, { opacity: 0.3 }],
+        { duration: 500, delay: 420, easing: 'ease-out', fill: 'backwards' });
+
+      const surgir = (sel, atraso) => {
+        const el = splash.querySelector(sel);
+        if (el) el.animate(
+          [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }],
+          { duration: 600, delay: atraso, easing: suave, fill: 'backwards' });
+      };
+      surgir('h1', 380);
+      surgir('p', 500);
+
       splash.querySelector('.splash__aura').animate(
         [{ transform: 'scale(0.7)', opacity: 0 }, { transform: 'scale(1.1)', opacity: 1 }],
         { duration: 1600, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' });
