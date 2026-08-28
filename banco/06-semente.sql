@@ -1394,7 +1394,7 @@ insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, cr
           now() - interval '4 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, criado_em)
-  values ('8df11063-b297-4ad3-be36-e42c96099826', '3659cb4c-2d09-499d-b744-46c6f92272ac', 5, 'Chegei chorando e saí de pé. Ela é firme e acolhedora ao mesmo tempo.', null,
+  values ('8df11063-b297-4ad3-be36-e42c96099826', '3659cb4c-2d09-499d-b744-46c6f92272ac', 5, 'Cheguei chorando e saí de pé. Ela é firme e acolhedora ao mesmo tempo.', null,
           now() - interval '12 days')
   on conflict (terapeuta_id, cliente_id) do nothing;
 insert into avaliacoes (terapeuta_id, cliente_id, nota, comentario, resposta, criado_em)

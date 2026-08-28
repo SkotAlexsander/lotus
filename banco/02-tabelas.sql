@@ -91,6 +91,26 @@ create table if not exists servicos (
   constraint valor_positivo check (valor >= 0)
 );
 
+-- ====== FOTOS DO ESPAÇO E DO TRABALHO ======
+-- ADIÇÃO (pedido de 27/08): a terapeuta mostra o local de atendimento e o
+-- trabalho em duas galerias no perfil. O arquivo em si mora no Storage do
+-- Supabase (bucket próprio, na Fase 1); aqui fica só o caminho e a legenda.
+-- A modalidade (presencial/on-line/híbrido) NÃO vira coluna: é derivada dos
+-- dois flags de atendimento que já existem — campo derivado digitado diverge.
+
+create table if not exists fotos_terapeuta (
+  id            bigint generated always as identity primary key,
+  terapeuta_id  uuid not null references perfis_terapeuta(user_id) on delete cascade,
+  tipo          text not null check (tipo in ('local','trabalho')),
+  caminho       text not null,           -- caminho no bucket do Storage
+  legenda       text,
+  ordem         int not null default 0,
+  criada_em     timestamptz not null default now()
+);
+
+create index if not exists idx_fotos_terapeuta
+  on fotos_terapeuta (terapeuta_id, tipo, ordem);
+
 -- ====== HORÁRIOS DE ATENDIMENTO ======
 create table if not exists horarios (
   id            bigint generated always as identity primary key,
@@ -178,12 +198,13 @@ create index if not exists idx_terapias_nome_busca
 
 
 -- ============================================================================
--- CONFERÊNCIA — esperado: 9 linhas
+-- CONFERÊNCIA — esperado: 11 linhas (uma por tabela deste arquivo; o número
+-- anterior, 9, estava errado desde a primeira versão — ninguém contou)
 -- ============================================================================
 select table_name
 from information_schema.tables
 where table_schema = 'public'
   and table_name in ('profiles','admins','terapias','perfis_terapeuta',
                      'terapeuta_terapias','servicos','horarios',
-                     'avaliacoes','favoritos','denuncias')
+                     'avaliacoes','favoritos','denuncias','fotos_terapeuta')
 order by table_name;

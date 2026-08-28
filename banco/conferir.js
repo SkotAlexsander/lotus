@@ -61,8 +61,8 @@ function lerEsquema(sql) {
 // (08). Ler só o primeiro faria toda tabela nova passar sem conferência.
 const esquemaSql = ler('02-tabelas.sql') + ler('08-conquistas-e-notificacoes.sql');
 const esquema = lerEsquema(esquemaSql);
-checa(Object.keys(esquema).length === 15,
-  'o esquema declara as 15 tabelas',
+checa(Object.keys(esquema).length === 16,
+  'o esquema declara as 16 tabelas',
   Object.keys(esquema).join(', '));
 
 /* ------------------------------------------- 2. semente: tabelas e colunas */

@@ -26,6 +26,7 @@ alter table terapias            enable row level security;
 alter table perfis_terapeuta    enable row level security;
 alter table terapeuta_terapias  enable row level security;
 alter table servicos            enable row level security;
+alter table fotos_terapeuta     enable row level security;
 alter table horarios            enable row level security;
 alter table avaliacoes          enable row level security;
 alter table favoritos           enable row level security;
@@ -167,6 +168,22 @@ create policy "ler servicos de quem esta ativa" on servicos
 
 drop policy if exists "dona mexe nos proprios servicos" on servicos;
 create policy "dona mexe nos proprios servicos" on servicos
+  for all to authenticated
+  using (auth.uid() = terapeuta_id)
+  with check (auth.uid() = terapeuta_id);
+
+
+-- Fotos seguem a mesma regra dos serviços: o mundo vê as de perfil ativo,
+-- e só a dona mexe nas dela.
+drop policy if exists "ler fotos de quem esta ativa" on fotos_terapeuta;
+create policy "ler fotos de quem esta ativa" on fotos_terapeuta
+  for select to authenticated
+  using (exists (select 1 from perfis_terapeuta p
+                 where p.user_id = terapeuta_id
+                   and (p.ativa or p.user_id = auth.uid())));
+
+drop policy if exists "dona mexe nas proprias fotos" on fotos_terapeuta;
+create policy "dona mexe nas proprias fotos" on fotos_terapeuta
   for all to authenticated
   using (auth.uid() = terapeuta_id)
   with check (auth.uid() = terapeuta_id);

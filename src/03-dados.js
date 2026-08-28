@@ -222,7 +222,7 @@ const Dados = (() => {
       horarios: [h(1, '08:00', '18:00'), h(2, '08:00', '18:00'), h(3, '08:00', '18:00'), h(4, '08:00', '18:00'), h(5, '08:00', '18:00'), h(6, '08:00', '12:00')],
       avaliacoes: [
         { autor: 'Marlene S.', nota: 5, dias: 4, texto: 'Vou nela há oito anos. Nunca me deu uma resposta pronta, sempre me fez pensar.' },
-        { autor: 'Jéssica P.', nota: 5, dias: 12, texto: 'Chegei chorando e saí de pé. Ela é firme e acolhedora ao mesmo tempo.' },
+        { autor: 'Jéssica P.', nota: 5, dias: 12, texto: 'Cheguei chorando e saí de pé. Ela é firme e acolhedora ao mesmo tempo.' },
         { autor: 'Eliane G.', nota: 5, dias: 29, texto: 'Preço muito honesto pelo tempo de sessão.' },
         { autor: 'Cleber M.', nota: 4, dias: 55, texto: 'Excelente atendimento. A sala fica num prédio meio confuso, vale chegar mais cedo.' },
         { autor: 'Rosa H.', nota: 5, dias: 77, texto: 'É daquelas pessoas que a gente indica sem medo.', resposta: 'Gratidão, Rosa. Um abraço.' },
@@ -378,6 +378,26 @@ const Dados = (() => {
     t.iniciais = t.nome.split(' ').filter((p) => p.length > 2).slice(0, 2).map((p) => p[0]).join('');
   });
 
+  /* As GALERIAS das fictícias: cartões de exemplo derivados dos dados de cada
+     uma (tom + terapias + bairro). Fase 0 não embute imagem real — 12 fotos
+     por perfil estourariam o orçamento de 500 KB do arquivo único. O que se
+     valida aqui é o LUGAR e o FLUXO das fotos, não o pixel. */
+  TERAPEUTAS.forEach((t, i) => {
+    const casa = i % 3 === 0 ? 'consultório' : i % 3 === 1 ? 'espaço terapêutico' : 'sala em casa';
+    t.fotos = {
+      local: [
+        { tom: t.tom, legenda: `Sala de atendimento — ${casa}` },
+        { tom: (t.tom + 24) % 360, legenda: `Recepção em ${t.bairro}` },
+        { tom: (t.tom + 200) % 360, legenda: 'Cantinho do chá' },
+      ],
+      trabalho: [
+        { tom: (t.tom + 12) % 360, legenda: `Sessão de ${t.terapias[0]}` },
+        { tom: (t.tom + 130) % 360, legenda: 'Materiais de trabalho' },
+        ...(t.terapias[1] ? [{ tom: (t.tom + 300) % 360, legenda: t.terapias[1] }] : []),
+      ],
+    };
+  });
+
   /* --------------------------------------------- mudar de onde se olha
      Trocar a posição NÃO é só mover o ponto azul: toda distância exibida, e a
      ordem da lista, saem dela. Recalcular aqui, num lugar só, é o que impede a
@@ -429,6 +449,7 @@ const Dados = (() => {
       endereco: '', bairro: '', cidade: 'Porto Alegre', uf: 'RS',
       x: EU.x, y: EU.y, lat: EU.lat, lng: EU.lng,
       terapias: new Set(), servicos: [], horarios: [],
+      fotos: { local: [], trabalho: [] },
       whatsapp: '', instagram: '', atendimento: new Set(['presencial']),
       visivel: true,
     },
@@ -525,6 +546,23 @@ const Dados = (() => {
       .sort((a, b) => a.distanciaKm - b.distanciaKm);
   }
 
+  /* A MODALIDADE é derivada, nunca digitada: presencial+on-line = híbrido.
+     Um campo separado "modalidade" divergiria dos dois flags no primeiro
+     esquecimento. Aceita array (terapeuta) ou Set (o perfil do assistente). */
+  function modalidade(t) {
+    const a = Array.from(t.atendimento || []);
+    const p = a.includes('presencial'), o = a.includes('online');
+    if (p && o) return { chave: 'hibrido', rotulo: 'Híbrido',
+      titulo: 'Atendimento híbrido',
+      texto: 'Presencial no espaço dela ou on-line por vídeo — você escolhe a cada sessão.' };
+    if (o) return { chave: 'online', rotulo: 'On-line',
+      titulo: 'Atendimento on-line (home office)',
+      texto: 'Ela atende de casa, por vídeo. Vale para qualquer lugar do Brasil.' };
+    return { chave: 'presencial', rotulo: 'Presencial',
+      titulo: 'Atendimento presencial',
+      texto: 'No espaço dela, no endereço mostrado no mapa.' };
+  }
+
   function filtrosAtivos() {
     const f = estado.filtros;
     return f.terapias.size + (f.precoMax ? 1 : 0) + (f.notaMin ? 1 : 0) + (f.abertaAgora ? 1 : 0) + (f.online ? 1 : 0) + (f.presencial ? 1 : 0) + (f.distanciaMax ? 1 : 0);
@@ -574,7 +612,7 @@ const Dados = (() => {
     ANCORA, paraLatLng, paraPlano, distanciaEntre,
     definirPosicao, restaurarPosicaoFicticia, recalcularDistancias, POSICAO_FICTICIA,
     agora, estaAberta, proximaAbertura, horariosPorDia, emMinutos,
-    listar, filtrosAtivos, porId, distribuicao,
+    listar, filtrosAtivos, porId, distribuicao, modalidade,
     brl, distancia, haQuanto, duracao, linkZap,
   };
 })();

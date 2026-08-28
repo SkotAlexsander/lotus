@@ -105,9 +105,18 @@ const App = (() => {
     transicao.para(alvo, { velocidade: velocidade / largura() });
   }
 
+  // Todo mini-mapa da tela devolve seu contexto WebGL antes de o DOM sumir
+  function soltarMinis(el) {
+    el.querySelectorAll('.minimapa').forEach((c) => {
+      if (c._mini && c._mini.remove) { try { c._mini.remove(); } catch (e) { /* já caiu */ } }
+      c._mini = null;
+    });
+  }
+
   function desmontarTopo() {
     const item = pilha.pop();
     if (!item) return;
+    soltarMinis(item.el);
     item.el.remove();
     if (item.veu) item.veu.remove();
     if (item.anterior) item.anterior.el.style.transform = '';
@@ -156,7 +165,7 @@ const App = (() => {
 
   /* Troca a raiz inteira (ex.: cliente → terapeuta), com dissolução curta */
   function trocarRaiz(nome) {
-    pilha.slice().reverse().forEach((it) => { it.el.remove(); if (it.veu) it.veu.remove(); });
+    pilha.slice().reverse().forEach((it) => { soltarMinis(it.el); it.el.remove(); if (it.veu) it.veu.remove(); });
     pilha.length = 0;
     const el = elementoDe(construir(nome));
     pilhaEl.appendChild(el);
@@ -250,6 +259,9 @@ const App = (() => {
       if (mapaCtrl && mapaCtrl.destruir) mapaCtrl.destruir();
       if (pararDeSeguir) { pararDeSeguir(); pararDeSeguir = null; }
       mapaCtrl = null; folha = null;
+      // O estado da folha morre junto — senão, na volta ao mapa, o 1º pino
+      // abre sem animação e a folha mede altura de elemento escondido (0).
+      folhaAberta = false; tipoFolha = null; idFolha = null; molaFolha = null;
     }
     if (E.aba === 'meuPerfil' || E.aba === 'mapa') montarMinimapas(cx);
 
@@ -442,6 +454,7 @@ const App = (() => {
          mostraria uma rua desenhada enquanto a tela anterior mostrava a rua de
          verdade, e a diferença faria a pessoa duvidar das duas. */
       if (MapaReal.disponivel() && Number.isFinite(lat) && Number.isFinite(lng)) {
+        let instancia = null;
         if (cx.dataset.arrastavel) {
           // Pino FIXO no centro, mapa se movendo por baixo: acertar um alvo
           // parado é mais fácil que arrastar um alvo.
@@ -449,7 +462,7 @@ const App = (() => {
           mira.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:3;pointer-events:none';
           mira.innerHTML = Telas.pinoSimplesHTML();
           cx.appendChild(mira);
-          MapaReal.montarMini(cx, lat, lng, {
+          instancia = MapaReal.montarMini(cx, lat, lng, {
             arrastavel: true,
             aoMover: (la, ln) => {
               E.perfil.lat = la; E.perfil.lng = ln;
@@ -458,8 +471,13 @@ const App = (() => {
             },
           });
         } else {
-          MapaReal.montarMini(cx, lat, lng);
+          instancia = MapaReal.montarMini(cx, lat, lng);
         }
+        /* Guardada no próprio nó para o desmonte achar: cada mini é um
+           contexto WebGL, e o navegador só dá ~16 — sem `remove()`, abrir
+           perfis em sequência derruba o contexto mais antigo (o mapa
+           principal apaga sem erro nenhum). */
+        cx._mini = instancia;
         return;
       }
 
@@ -505,6 +523,11 @@ const App = (() => {
       arrastando = false; cx.style.cursor = 'grab';
       E.perfil.x = (w / 2 - tx) / z;
       E.perfil.y = (h / 2 - ty) / z;
+      // O motor REAL grava lat/lng e deriva o plano; este (desenhado) tem de
+      // fazer o mesmo ao contrário — senão o endereço diverge entre motores e
+      // a Fase 1 salvaria a coordenada velha.
+      const geo = Dados.paraLatLng(E.perfil.x, E.perfil.y);
+      E.perfil.lat = geo.lat; E.perfil.lng = geo.lng;
     };
     cx.addEventListener('pointerup', fim);
     cx.addEventListener('pointercancel', fim);
@@ -564,6 +587,10 @@ const App = (() => {
     if (E.favoritos.has(id)) { E.favoritos.delete(id); avisar('Removida das favoritas', 'coracao'); }
     else { E.favoritos.add(id); avisar('Salva nas favoritas', 'coracao'); Conquistas.registrar('favoritou'); }
     repintarFavoritos(id);
+    // Na PRÓPRIA aba Favoritas o cartão tem de sair/entrar da lista na hora —
+    // só repintar corações deixava três indicadores divergindo na mesma tela
+    // (badge da aba, "1 salva" do cabeçalho e a lista).
+    if (E.aba === 'favoritas' && pilha.length === 1) renderAba();
   }
 
   // Repinta só os corações daquele id — nada de reconstruir a tela inteira,
@@ -583,12 +610,22 @@ const App = (() => {
   }
 
   function atualizarMapa() {
-    if (mapaCtrl && mapaCtrl.atualizarPins) mapaCtrl.atualizarPins();
+    if (mapaCtrl && mapaCtrl.atualizarPins) {
+      mapaCtrl.atualizarPins();
+      // O motor desenhado reconstrói os pinos por innerHTML e perde o anel de
+      // seleção; o real preserva. Igualar por cima custa uma chamada.
+      if (folhaAberta && idFolha && mapaCtrl.selecionar) mapaCtrl.selecionar(idFolha);
+    }
     const chips = document.getElementById('chips');
     if (chips) chips.outerHTML = Telas.chipsFiltro();
     const conta = document.getElementById('contaFiltro');
     if (conta) conta.textContent = Dados.listar().length;
-    if (E.modo === 'lista') renderAba();
+    // Modo lista: repinta SÓ o miolo dos resultados — redesenhar a aba inteira
+    // destruía o campo de busca no meio da digitação (foco caía, teclado fechava)
+    if (E.modo === 'lista') {
+      const rl = document.getElementById('resultadosLista');
+      if (rl) rl.innerHTML = Telas.resultadosLista(); else renderAba();
+    }
     if (tipoFolha === 'filtros' && folhaAberta) {
       // A folha de filtros se remede sozinha ao mudar de tamanho
       const alt = folha.offsetHeight;
@@ -786,12 +823,22 @@ const App = (() => {
          sempre a primeira e a segunda nunca seria editável. */
       if (e.target.dataset.a === 'horaAbre' || e.target.dataset.a === 'horaFecha') {
         const h = E.perfil.horarios[Number(e.target.dataset.ix)];
-        if (h) h[e.target.dataset.a === 'horaAbre' ? 'abre' : 'fecha'] = e.target.value;
+        // Campo de hora LIMPO devolve '' — gravar isso criaria uma faixa
+        // "às" que nunca abre. Devolve o valor que estava.
+        if (h && e.target.value) h[e.target.dataset.a === 'horaAbre' ? 'abre' : 'fecha'] = e.target.value;
+        else if (h) e.target.value = h[e.target.dataset.a === 'horaAbre' ? 'abre' : 'fecha'];
       }
     });
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { if (folhaAberta) fecharFolha(); else voltar(); }
+      /* Cartões são <article role="button"> — e role="button" NÃO ganha o
+         click sintético que um <button> de verdade ganha. Sem isto, Enter e
+         espaço num cartão focado não abrem nada. */
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[role="button"]:not(button)')) {
+        e.preventDefault();
+        e.target.click();
+      }
     });
   }
 
@@ -849,6 +896,7 @@ const App = (() => {
       case 'favoritar': alternarFavorito(id); break;
       case 'whatsapp': {
         const t = Dados.porId(id);
+        if (!t) break;
         avisar(`Abrindo o WhatsApp de ${t.nome.split(' ')[0]}…`, 'zap');
         abrirFora(Dados.linkZap(t));
         Conquistas.registrar('contato');
@@ -860,6 +908,7 @@ const App = (() => {
          aba nova. O app do Instagram captura este endereço quando instalado. */
       case 'instagram': {
         const t = Dados.porId(id);
+        if (!t) break;
         avisar(`Abrindo o Instagram de ${t.nome.split(' ')[0]}…`, 'instagram');
         abrirFora('https://instagram.com/' + t.instagram);
         break;
@@ -867,7 +916,10 @@ const App = (() => {
       case 'avaliar': abrir('avaliar', { id }); break;
       case 'nota': {
         const n = Number(el.dataset.n);
-        el.closest('.seletor-estrelas').querySelectorAll('button').forEach((b, i) => b.dataset.on = (i < n ? 1 : 0));
+        el.closest('.seletor-estrelas').querySelectorAll('button').forEach((b, i) => {
+          b.dataset.on = (i < n ? 1 : 0);
+          b.setAttribute('aria-pressed', String(i < n));
+        });
         const rot = document.getElementById('rotuloNota');
         if (rot) rot.textContent = ['', 'Não recomendo', 'Deixou a desejar', 'Foi bom', 'Muito bom', 'Excelente'][n];
         const btn = document.getElementById('btnAvaliar');
@@ -926,6 +978,10 @@ const App = (() => {
       case 'limparFiltros':
         E.filtros = { terapias: new Set(), precoMax: null, notaMin: null, abertaAgora: false, online: false, presencial: false, distanciaMax: null };
         E.busca = '';
+        // O campo visível também — senão o texto antigo fica na tela enquanto
+        // os pinos já mostram tudo (mesmas duas linhas do case limparBusca)
+        { const c = document.getElementById('campoBusca'); if (c) c.value = ''; }
+        { const x = document.querySelector('[data-a="limparBusca"]'); if (x) x.hidden = true; }
         recarregarFiltros(); break;
       case 'limparBusca': {
         E.busca = '';
@@ -985,7 +1041,7 @@ const App = (() => {
       case 'proximoPasso': {
         const erro = validarPasso(E.passo);
         if (erro) { avisar(erro, 'info'); break; }
-        if (E.passo === 5) {
+        if (E.passo === 6) {
           P.visivel = true;
           E.aba = 'meuPerfil';
           Conquistas.registrar('perfil-publicado');
@@ -1005,8 +1061,28 @@ const App = (() => {
         const x = el.dataset.tipo;
         if (P.atendimento.has(x) && P.atendimento.size > 1) P.atendimento.delete(x);
         else P.atendimento.add(x);
-        el.setAttribute('aria-pressed', String(P.atendimento.has(x))); break;
+        el.setAttribute('aria-pressed', String(P.atendimento.has(x)));
+        // A prévia diz na hora o que o perfil vai mostrar (híbrido/on-line/presencial)
+        const previa = document.getElementById('previaModalidade');
+        if (previa) previa.innerHTML = `No seu perfil vai aparecer: <b>${Dados.modalidade(P).titulo}</b>.`;
+        break;
       }
+
+      /* --- terapeuta: fotos do espaço e do trabalho (Fase 0: cartões de
+         exemplo — o que se valida é o fluxo de montar a vitrine) --- */
+      case 'maisFoto': {
+        const tipo = el.dataset.tipo;
+        const lista = P.fotos[tipo];
+        if (lista.length >= 6) { avisar('Seis fotos por seção é o limite — escolha as melhores.', 'info'); break; }
+        const legendas = tipo === 'local'
+          ? ['Sala de atendimento', 'Recepção', 'Cantinho do chá', 'Entrada', 'Ambiente', 'Jardim']
+          : ['Sessão em andamento', 'Mesa montada', 'Materiais de trabalho', 'Cristais', 'Antes da sessão', 'Detalhe'];
+        lista.push({ tom: (P.tom + lista.length * 47) % 360, legenda: legendas[lista.length % legendas.length] });
+        recarregarPasso(); break;
+      }
+      case 'tiraFoto':
+        P.fotos[el.dataset.tipo].splice(Number(el.dataset.ix), 1);
+        recarregarPasso(); break;
       case 'adicionarServico': {
         const nome = (document.getElementById('svNome') || {}).value || '';
         const dur = Number((document.getElementById('svDur') || {}).value) || 60;
@@ -1037,6 +1113,8 @@ const App = (() => {
           return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
         };
         const abre = ultima ? somar(ultima.fecha, 90) : '13:30';
+        // Sem espaço no dia, a faixa nasceria "23:59 às 23:59" — morta e muda
+        if (abre >= '23:00') { avisar('O dia não tem mais espaço para outra faixa.', 'info'); break; }
         P.horarios.push({ dia, abre, fecha: somar(abre, 4 * 60) });
         recarregarPasso(); break;
       }
@@ -1105,6 +1183,7 @@ const App = (() => {
     if (!item || item.nome !== 'assistente') return;
     const novo = elementoDe(Telas.assistente());
     novo.style.transform = item.el.style.transform;
+    novo.className = item.el.className;   // preserva tela--empilhada (a sombra da borda)
     item.el.replaceWith(novo);
     item.el = novo;
     if (!Fisica.menosMovimento()) {
@@ -1128,8 +1207,9 @@ const App = (() => {
     if (n === 1 && !P.bairro.trim()) return 'Informe ao menos o bairro.';
     if (n === 2 && P.terapias.size === 0) return 'Marque pelo menos uma terapia.';
     if (n === 3 && P.servicos.length === 0) return 'Cadastre pelo menos um serviço com valor.';
-    if (n === 4 && P.horarios.length === 0) return 'Marque pelo menos um dia de atendimento.';
-    if (n === 5 && !P.whatsapp.trim()) return 'O WhatsApp é obrigatório — é por ele que a cliente te chama.';
+    // n === 4 (Seu espaço) não valida nada: foto é convite, não obrigação.
+    if (n === 5 && P.horarios.length === 0) return 'Marque pelo menos um dia de atendimento.';
+    if (n === 6 && !P.whatsapp.trim()) return 'O WhatsApp é obrigatório — é por ele que a cliente te chama.';
     return null;
   }
 

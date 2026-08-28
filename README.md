@@ -42,7 +42,7 @@ construir reputação.
 avaliação, toca num pino, lê o perfil inteiro — serviços com valor, horários com
 selo de *aberta agora*, avaliações com resposta da terapeuta — e chama no WhatsApp.
 
-**Quem atende** monta o perfil em seis passos, marca no mapa onde atende (podendo
+**Quem atende** monta o perfil em sete passos — incluindo as fotos do espaço e do trabalho, marca no mapa onde atende (podendo
 mostrar só o bairro), define serviços e valores, horários, e passa a aparecer para
 as clientes da região. Responde avaliações e acompanha um painel simples.
 
@@ -61,11 +61,12 @@ ficção, nada sai do aparelho e nada fica gravado.
 | Mapa real | ruas de verdade com MapLibre + [OpenFreeMap](https://openfreemap.org) — sem chave, sem cadastro |
 | GPS | localização do aparelho, com o raio de precisão desenhado em metros |
 | Plano B | sem internet ele cai num mapa desenhado por código e continua inteiro |
+| Vitrine | galerias do local e do trabalho no perfil, e a modalidade dita por extenso: presencial, on-line ou híbrido |
 | Conquistas | 7 selos que marcam a jornada real — no produto, quem concede é o banco, por gatilho |
 | Avisos | notificação nativa na **tela de bloqueio**, com política: silêncio à noite, no máximo 3 por sessão |
-| 120 provas | em navegador real: fluxos (77), acessibilidade (15), GPS (12), conquistas (11), plano B (5) — com orçamentos de desempenho e 5 larguras |
+| 128 provas | em navegador real: fluxos (85), acessibilidade (15), GPS (12), conquistas (11), plano B (5) — com orçamentos de desempenho e 5 larguras |
 | Android | APK instalável, provado em emulador — inclusive o aviso no bloqueio |
-| Banco | SQL completo para Supabase + PostGIS: 15 tabelas, RLS em todas, gatilhos que concedem |
+| Banco | SQL completo para Supabase + PostGIS: 16 tabelas, RLS em todas, gatilhos que concedem |
 | Documentação | [7 documentos](documentacao/00-INDICE.md) explicando como o código funciona e por quê |
 
 ---
@@ -134,14 +135,14 @@ montar.js             src/ → index.html
 banco/                o SQL do Supabase (ver banco/README.md)
 android/              projeto Android escrito à mão
 documentacao/         como o código funciona, e por quê — comece pelo 00-INDICE
-teste/                as bancadas: fluxos, GPS, conquistas, plano B
+teste/                as bancadas: fluxos, acessibilidade, GPS, conquistas, plano B
 ```
 
 ### Rodar
 
 ```bash
 node montar.js                # src/ → index.html
-node teste/bancada.js         # 77 provas de fluxo e orçamentos (precisa de Playwright)
+node teste/bancada.js         # 85 provas de fluxo e orçamentos (precisa de Playwright)
 node teste/acessibilidade.js  # 15 provas do RNF02 — leitor de tela, 200%, foco
 node teste/gps.js             # 13 do GPS: permitiu perto, permitiu longe, negou
 node teste/conquistas.js      # 12 das conquistas e da política do aviso

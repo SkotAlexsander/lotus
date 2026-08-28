@@ -248,6 +248,17 @@ function checa(cond, nome, detalhe = '') {
   /* filtros */
   await clicar('[data-a="abrirFiltros"]', 600);
   checa(await p.isVisible('#btnAplicar'), 'folha de filtros abriu');
+  /* A folha CABE no quadro. Já estourou 40px pelo topo (bottom inline + teto
+     na classe, ninguém somava os dois) e nenhuma prova pegou: overflow
+     vertical de elemento absoluto não rola nada. Espera a mola PARAR. */
+  await p.waitForTimeout(900);
+  const geoFolha = await p.evaluate(() => {
+    const f = document.getElementById('folha').getBoundingClientRect();
+    const alca = document.querySelector('.folha__alca').getBoundingClientRect();
+    return { topo: Math.round(f.top), alca: Math.round(alca.top) };
+  });
+  checa(geoFolha.topo >= 0 && geoFolha.alca >= 0,
+    'a folha de filtros cabe inteira no quadro', `topo em ${geoFolha.topo}px`);
   await foto('06-filtros');
   await clicar('#folha [data-a="filtroTerapia"][data-terapia="Apometria"]', 450);
   const visiveisApo = await p.$$eval('.pin', (els) => els.filter((e) => e.style.pointerEvents !== 'none').length);
@@ -300,6 +311,15 @@ function checa(cond, nome, detalhe = '') {
   const temMini = await p.$$eval('.minimapa svg', (e) => e.length);
   checa(temHorarios && temValores, 'perfil traz horários e valores');
   checa(temMini > 0, 'mini-mapa do endereço desenhou', `${temMini} svg`);
+  /* As galerias e a modalidade dita por extenso (pedido de 27/08) */
+  const espaco = await p.evaluate(() => ({
+    galerias: document.querySelectorAll('.tela--empilhada .galeria').length,
+    fotos: document.querySelectorAll('.tela--empilhada .foto').length,
+    modalidade: /Atendimento (presencial|híbrido|on-line)/.test(document.body.innerText),
+  }));
+  checa(espaco.galerias === 2 && espaco.fotos >= 5,
+    'perfil mostra as duas galerias — local e trabalho', JSON.stringify(espaco));
+  checa(espaco.modalidade, 'perfil diz a modalidade por extenso');
   await overflow('perfil');
   await areaDeToque('perfil');
   await foto('08-perfil');
@@ -492,7 +512,23 @@ function checa(cond, nome, detalhe = '') {
   await foto('14-assistente-servicos');
   await clicar('#btnPasso', 550);
 
-  // passo 5 — horários
+  /* passo 5 — o espaço (fotos do local e do trabalho) */
+  await clicar('[data-a="maisFoto"][data-tipo="local"]', 400);
+  await clicar('[data-a="maisFoto"][data-tipo="local"]', 400);
+  await clicar('[data-a="maisFoto"][data-tipo="trabalho"]', 400);
+  const nFotos = await p.evaluate(() => {
+    const f = Dados.estado.perfil.fotos;
+    return { local: f.local.length, trabalho: f.trabalho.length };
+  });
+  checa(nFotos.local === 2 && nFotos.trabalho === 1,
+    'as galerias do assistente recebem as fotos', JSON.stringify(nFotos));
+  await clicar('.foto__tirar', 400);
+  const aposTirar = await p.evaluate(() => Dados.estado.perfil.fotos.local.length);
+  checa(aposTirar === 1, 'tirar uma foto tira só ela', `local com ${aposTirar}`);
+  await foto('14b-assistente-espaco');
+  await clicar('#btnPasso', 550);
+
+  // passo 6 — horários
   await clicar('[data-a="alternarDia"][data-dia="2"]', 350);
   await clicar('[data-a="alternarDia"][data-dia="4"]', 350);
   const nDias = await p.evaluate(() => Dados.estado.perfil.horarios.length);
@@ -510,14 +546,30 @@ function checa(cond, nome, detalhe = '') {
   await foto('15-assistente-horarios');
   await clicar('#btnPasso', 550);
 
-  // passo 6 — contato
+  // passo 7 — contato e modalidade
   await p.fill('[data-campo="whatsapp"]', '51999887766');
   await p.fill('[data-campo="instagram"]', 'miriam.apometria');
+
+  /* A MODALIDADE é derivada dos dois chips e dita na hora (RF do pedido de
+     27/08: presencial, on-line/home office ou híbrido). */
+  const antesMod = await p.evaluate(() => document.getElementById('previaModalidade').innerText);
+  checa(/presencial/i.test(antesMod), 'a prévia começa em atendimento presencial', antesMod);
+  await clicar('[data-a="perfilAtendimento"][data-tipo="online"]', 300);
+  const depoisMod = await p.evaluate(() => document.getElementById('previaModalidade').innerText);
+  checa(/híbrido/i.test(depoisMod), 'ligar on-line junto vira atendimento híbrido', depoisMod);
+
   await clicar('#btnPasso', 1000);
 
   checa(await p.isVisible('[data-a="alternarVisivel"]'), 'perfil publicado, prévia abriu');
   const nomeNaPrevia = await p.evaluate(() => document.body.innerText.includes('Miriam Wanda'));
   checa(nomeNaPrevia, 'a prévia mostra o nome digitado');
+  const galeriasNaPrevia = await p.evaluate(() => ({
+    galerias: document.querySelectorAll('.galeria').length,
+    fotos: document.querySelectorAll('.foto').length,
+    hibrido: document.body.innerText.includes('Atendimento híbrido'),
+  }));
+  checa(galeriasNaPrevia.fotos >= 2 && galeriasNaPrevia.hibrido,
+    'a prévia mostra as fotos adicionadas e a modalidade híbrida', JSON.stringify(galeriasNaPrevia));
   await overflow('meu perfil');
   await areaDeToque('meu perfil');
   await foto('16-meu-perfil');

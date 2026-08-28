@@ -31,6 +31,7 @@ const Telas = (() => {
     zap: '<path d="M4 20l1.3-3.9A7.7 7.7 0 1 1 8.2 19L4 20Z"/><path d="M9 10.4c.3 1.2 1.1 2.3 2.2 3 .8.5 1.7.8 2.4.7l.9-1.4 1.7 1-.8 1.4c-.7.6-1.9.6-3.1.1a8.4 8.4 0 0 1-4.4-4.6c-.4-1.1-.3-2.1.2-2.7l1.4-.8 1 1.7-1.5.9Z"/>',
     instagram: '<rect x="4" y="4" width="16" height="16" rx="4.6"/><circle cx="12" cy="12" r="3.4"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor" stroke="none"/>',
     check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    camera: '<path d="M4 8.5h3l1.6-2.3h6.8L17 8.5h3v10H4z"/><circle cx="12" cy="13.2" r="3.1"/>',
     mais: '<path d="M12 5v14M5 12h14"/>',
     menos: '<path d="M5 12h14"/>',
     lixo: '<path d="M4.5 7h15M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l.8 12.1A1.5 1.5 0 0 0 8.8 20.5h6.4a1.5 1.5 0 0 0 1.5-1.4L17.5 7"/>',
@@ -82,7 +83,7 @@ const Telas = (() => {
   // Determinístico — a mesma terapeuta tem sempre a mesma cor.
   function avatar(t, tam = 56) {
     const h = t.tom ?? 268;
-    const id = `g${t.id || 'x'}${tam}`;
+    const id = `g${String(t.id || 'x').replace(/\W/g, '')}${tam}`;   // \W fora: espaço em id quebra o url(#…)
     return `<div class="avatar" style="width:${tam}px;height:${tam}px">
       <svg viewBox="0 0 100 100" width="${tam}" height="${tam}" aria-hidden="true">
         <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
@@ -99,16 +100,22 @@ const Telas = (() => {
 
   /* ---------------------------------------------------------- estrelas */
   const estrelaCheia = '<path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9L12 3.6Z" fill="currentColor" stroke="none"/>';
-  const estrelaMeia = `<defs><linearGradient id="meia"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="transparent"/></linearGradient></defs>
-    <path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9L12 3.6Z" fill="url(#meia)" stroke="currentColor" stroke-width="1.4"/>`;
+  // Id ÚNICO por uso: id repetido no documento resolve sempre para o 1º —
+  // a mesma família do <mask> do mapa (04-mapa.js resolve com sufixo).
+  let nMeia = 0;
+  const estrelaMeia = () => {
+    const gid = 'meia' + (++nMeia);
+    return `<defs><linearGradient id="${gid}"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="transparent"/></linearGradient></defs>
+    <path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9L12 3.6Z" fill="url(#${gid})" stroke="currentColor" stroke-width="1.4"/>`;
+  };
   const estrelaVazia = '<path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9L12 3.6Z" fill="none" stroke="currentColor" stroke-width="1.4"/>';
 
   function estrelas(nota, grande = false) {
     let s = '';
     for (let i = 1; i <= 5; i++) {
-      s += svg(nota >= i ? estrelaCheia : (nota >= i - 0.5 ? estrelaMeia : estrelaVazia), grande ? 21 : 15);
+      s += svg(nota >= i ? estrelaCheia : (nota >= i - 0.5 ? estrelaMeia() : estrelaVazia), grande ? 21 : 15);
     }
-    return `<span class="estrelas${grande ? ' estrelas--g' : ''}" role="img" aria-label="${nota} de 5 estrelas">${s}</span>`;
+    return `<span class="estrelas${grande ? ' estrelas--g' : ''}" role="img" aria-label="${String(nota).replace('.', ',')} de 5 estrelas">${s}</span>`;
   }
 
   /* -------------------------------------------------- peças reutilizadas */
@@ -145,6 +152,29 @@ const Telas = (() => {
   // O 2º parâmetro vem de graça do .map(): é o índice, usado só para o
   // escalonamento da entrada (--i limita em 6 — depois da 7ª carta, escalonar
   // mais é atraso, não coreografia).
+  /* Um cartão de galeria. Fase 0: gradiente + legenda no lugar do pixel —
+     o que se valida é o lugar das fotos no perfil, não a imagem. `editavel`
+     acrescenta o botão de tirar (só no assistente). */
+  function fotoHTML(f, tipo, ix = -1, editavel = false) {
+    /* O role="img" fica na IMAGEM, nunca no figure: role="img" torna os
+       descendentes apresentacionais, e o botão de tirar sumiria da árvore
+       de acessibilidade continuando focável — violação de ARIA. */
+    return `<figure class="foto">
+      <div class="foto__img" role="img" aria-label="Foto: ${esc(f.legenda)}"
+        style="background:linear-gradient(150deg, hsl(${f.tom} 42% 78%), hsl(${(f.tom + 40) % 360} 46% 58%))">
+        ${svg(ICONES.camera, 26)}
+      </div>
+      ${editavel ? `<button class="foto__tirar" data-a="tiraFoto" data-tipo="${tipo}" data-ix="${ix}"
+        aria-label="Tirar a foto ${esc(f.legenda)}">${svg(ICONES.fechar, 14)}</button>` : ''}
+      <figcaption class="foto__legenda">${esc(f.legenda)}</figcaption>
+    </figure>`;
+  }
+
+  function galeria(fotos, tipo, editavel = false) {
+    if (!fotos || !fotos.length) return '';
+    return `<div class="galeria" role="group">${fotos.map((f, ix) => fotoHTML(f, tipo, ix, editavel)).join('')}</div>`;
+  }
+
   function cartaoTerapeuta(t, i = 0) {
     const fav = Dados.estado.favoritos.has(t.id);
     return `<article class="cartao mb12" data-a="abrirPerfil" data-id="${t.id}" role="button" tabindex="0" style="--i:${Math.min(i, 6)}">
@@ -376,7 +406,7 @@ const Telas = (() => {
         <button class="redondo redondo--vidro" data-a="recentrar" aria-label="Centralizar em mim">${ic('mira', 21)}</button>
         <button class="redondo redondo--vidro" data-a="modoLista" aria-label="Ver em lista">${ic('lista', 21)}</button>
       </div>
-      <div class="folha" id="folha" hidden aria-live="polite" style="bottom:calc(var(--altura-tab) + var(--base))">
+      <div class="folha" id="folha" hidden aria-live="polite">
         <div class="folha__alca" id="alca"><i></i></div>
         <div class="folha__conteudo" id="folhaConteudo"></div>
       </div>`;
@@ -391,7 +421,7 @@ const Telas = (() => {
     const estilo = (op.posicionar ? `left:${t.x}px;top:${t.y}px;` : '')
                  + (op.fora ? 'opacity:.22;pointer-events:none' : '');
     return `<button class="pin ${aberta ? '' : 'pin--fechada'}" data-id="${t.id}" data-sel="0"
-      style="${estilo}" aria-label="${esc(t.nome)}, nota ${t.nota}">
+      style="${estilo}" aria-label="${esc(t.nome)}, nota ${String(t.nota).replace('.', ',')}">
       <span class="pin__anel"></span>
       <svg class="pin__corpo" viewBox="0 0 46 56" width="46" height="56" aria-hidden="true">
         <path class="pin__forma" d="M23 55C23 55 43 36.5 43 21.5 43 10.2 34.05 1 23 1S3 10.2 3 21.5C3 36.5 23 55 23 55Z" fill="var(--violeta)"/>
@@ -526,7 +556,7 @@ const Telas = (() => {
             <span class="pequeno dim">· ${t.total} avaliações</span>
           </div>
 
-          <div class="linha gap6 mt12">${selo(t)}${t.atendimento.includes('online') ? `<span class="etiqueta etiqueta--online">Atende on-line</span>` : ''}</div>
+          <div class="linha gap6 mt12">${selo(t)}${(() => { const m = Dados.modalidade(t); return m.chave === 'presencial' ? '' : `<span class="etiqueta etiqueta--online">${m.chave === 'hibrido' ? 'Híbrido — presencial e on-line' : 'Atende on-line'}</span>`; })()}</div>
 
           <p class="corpo mt16">${esc(t.bio)}</p>
 
@@ -558,9 +588,23 @@ const Telas = (() => {
             </div>`).join('')}
         </section>
 
-        <!-- endereço -->
+        <!-- o espaço e o trabalho (RF08: fotos) -->
+        ${t.fotos && (t.fotos.local.length || t.fotos.trabalho.length) ? `
+        <section class="secao">
+          <div class="secao__titulo"><h2 class="d3">O espaço e o trabalho</h2></div>
+          ${t.fotos.local.length ? `
+            <h3 class="micro dim mb8">O local de atendimento</h3>
+            ${galeria(t.fotos.local, 'local')}` : ''}
+          ${t.fotos.trabalho.length ? `
+            <h3 class="micro dim mt16 mb8">O trabalho</h3>
+            ${galeria(t.fotos.trabalho, 'trabalho')}` : ''}
+        </section>` : ''}
+
+        <!-- endereço e modalidade -->
         <section class="secao">
           <div class="secao__titulo"><h2 class="d3">Onde ela atende</h2></div>
+          ${(() => { const m = Dados.modalidade(t); return `
+          <p class="corpo mb12"><b>${m.titulo}.</b> <span class="dim">${m.texto}</span></p>`; })()}
           <div class="cartao" style="padding:0;overflow:hidden">
             <div class="minimapa" data-x="${t.x}" data-y="${t.y}" data-lat="${t.lat}" data-lng="${t.lng}" style="height:160px;position:relative;overflow:hidden;background:var(--mapa-solo)"></div>
             <div style="padding:14px">
@@ -603,7 +647,7 @@ const Telas = (() => {
               ${minha.texto ? `<p class="corpo mt8">${esc(minha.texto)}</p>` : ''}
             </div>` : ''}
 
-          ${t.avaliacoes.map((a) => `
+          ${t.avaliacoes.filter((a) => !a.minha).map((a) => `
             <div class="avaliacao">
               <div class="entre">
                 <div class="linha gap6">
@@ -632,11 +676,13 @@ const Telas = (() => {
         </button>
         ${t.instagram ? `
         <button class="redondo" data-a="instagram" data-id="${t.id}"
-          aria-label="Abrir o Instagram de ${t.nome}, @${t.instagram}"
+          aria-label="Abrir o Instagram de ${esc(t.nome)}, arroba ${esc(t.instagram)}"
           style="width:52px;height:52px;border-radius:var(--r-m);box-shadow:inset 0 0 0 1.5px var(--linha-forte)">
           ${svg(ICONES.instagram, 23)}
         </button>` : ''}
-        <button class="btn btn--zap cresce" data-a="whatsapp" data-id="${t.id}">${ic('zap', 21)} Chamar no WhatsApp</button>
+        <button class="btn btn--zap cresce" data-a="whatsapp" data-id="${t.id}"
+          aria-label="Chamar ${esc(t.nome)} no WhatsApp"
+          style="white-space:nowrap">${ic('zap', 21)} ${t.instagram ? 'WhatsApp' : 'Chamar no WhatsApp'}</button>
       </div>
     </div>`;
   }
@@ -650,9 +696,9 @@ const Telas = (() => {
         <div class="cartao centro">
           <p class="corpo dim mb16">Como foi o seu atendimento?</p>
           <div class="seletor-estrelas" id="seletorEstrelas">
-            ${[1, 2, 3, 4, 5].map((n) => `<button data-a="nota" data-n="${n}" data-on="${minha.nota >= n ? 1 : 0}" aria-label="${n} estrelas">${svg(estrelaCheia, 40)}</button>`).join('')}
+            ${[1, 2, 3, 4, 5].map((n) => `<button data-a="nota" data-n="${n}" data-on="${minha.nota >= n ? 1 : 0}" aria-pressed="${minha.nota >= n}" aria-label="${n} ${n === 1 ? 'estrela' : 'estrelas'}">${svg(estrelaCheia, 40)}</button>`).join('')}
           </div>
-          <p class="t2 mt12" id="rotuloNota">${['Toque para dar sua nota', 'Não recomendo', 'Deixou a desejar', 'Foi bom', 'Muito bom', 'Excelente'][minha.nota]}</p>
+          <p class="t2 mt12" id="rotuloNota" aria-live="polite">${['Toque para dar sua nota', 'Não recomendo', 'Deixou a desejar', 'Foi bom', 'Muito bom', 'Excelente'][minha.nota]}</p>
         </div>
 
         <label class="campo mt16">
@@ -671,16 +717,24 @@ const Telas = (() => {
   }
 
   /* --- lista ------------------------------------------------------------- */
-  function abaLista() {
+  /* Só o MIOLO dos resultados — repintável sem tocar na barra de busca.
+     Redesenhar a aba inteira a cada tecla destruía o próprio campo: o foco
+     caía e, no celular, o teclado fechava no meio da palavra. */
+  function resultadosLista() {
     const r = Dados.listar();
+    return `
+        <p class="pequeno dim mb12">${r.length === 1 ? '1 terapeuta encontrada' : `${r.length} terapeutas encontradas`} · da mais perto para a mais longe</p>
+        ${r.length ? r.map(cartaoTerapeuta).join('') : vazioBusca()}`;
+  }
+
+  function abaLista() {
     return `
       <div class="cabecalho cabecalho--vidro" style="padding-bottom:8px">
         ${barraBusca()}
         ${chipsFiltro()}
       </div>
-      <div class="rolar" style="padding:14px 18px calc(var(--altura-tab) + var(--base) + 14px)">
-        <p class="pequeno dim mb12">${r.length === 1 ? '1 terapeuta encontrada' : `${r.length} terapeutas encontradas`} · da mais perto para a mais longe</p>
-        ${r.length ? r.map(cartaoTerapeuta).join('') : vazioBusca()}
+      <div class="rolar" id="resultadosLista" style="padding:14px 18px calc(var(--altura-tab) + var(--base) + 14px)">
+        ${resultadosLista()}
       </div>
       <div class="flutuantes flutuantes--dir" style="bottom:calc(var(--altura-tab) + var(--base) + 14px)">
         <button class="redondo redondo--vidro" data-a="modoMapa" aria-label="Ver no mapa">${ic('mapa', 21)}</button>
@@ -783,7 +837,7 @@ const Telas = (() => {
         <h3 class="micro dim mt24 mb8">Privacidade</h3>
         <div class="cartao" style="padding:0 16px">
           ${linha('local', 'Localização', localizacaoEmTexto(), 'alternarLocal')}
-          ${linha('saida', 'Exportar meus dados', 'Receber uma cópia em e-mail', 'exportar')}
+          ${linha('saida', 'Exportar meus dados', 'Receber uma cópia por e-mail', 'exportar')}
           ${linha('lixo', 'Excluir minha conta', 'Apaga tudo, sem volta', 'excluirConta', 'var(--alerta)')}
         </div>
 
@@ -872,7 +926,7 @@ const Telas = (() => {
       <div class="rolar pl pr">
         <p class="corpo dim mb16">Sua denúncia é anônima. Nossa equipe analisa em até 48 horas e o conteúdo pode sair do ar enquanto isso.</p>
         ${motivos.map((m) => `
-          <button class="opcao mb8" style="width:100%" data-a="motivoDenuncia" data-motivo="${esc(m)}">
+          <button class="opcao mb8" style="width:100%" data-a="motivoDenuncia" data-motivo="${esc(m)}" aria-pressed="false">
             <span class="opcao__marca">${ic('check', 14)}</span>
             <span class="cresce">${esc(m)}</span>
           </button>`).join('')}
@@ -887,7 +941,7 @@ const Telas = (() => {
      LADO DA TERAPEUTA
      ====================================================================== */
 
-  const PASSOS = ['Sobre você', 'Endereço', 'Terapias', 'Serviços', 'Horários', 'Contato'];
+  const PASSOS = ['Sobre você', 'Endereço', 'Terapias', 'Serviços', 'Seu espaço', 'Horários', 'Contato'];
 
   function assistente() {
     const p = Dados.estado.passo;
@@ -896,7 +950,7 @@ const Telas = (() => {
         <div class="cabecalho__linha">
           <button class="redondo redondo--nu" data-a="passoAnterior" aria-label="Voltar">${ic('setaEsq', 22)}</button>
           <div class="cabecalho__titulo">
-            <p class="micro dim">Passo ${p + 1} de 6</p>
+            <p class="micro dim">Passo ${p + 1} de ${PASSOS.length}</p>
             <h2 class="d3">${PASSOS[p]}</h2>
           </div>
         </div>
@@ -904,7 +958,7 @@ const Telas = (() => {
       <div class="progresso mb16">${PASSOS.map((_, i) => `<i data-on="${i <= p ? 1 : 0}"></i>`).join('')}</div>
       <div class="rolar pl pr" id="corpoPasso">${passo(p)}</div>
       <div class="rodape-fixo">
-        <button class="btn btn--bloco" data-a="proximoPasso" id="btnPasso">${p === 5 ? 'Publicar meu perfil' : 'Continuar'}</button>
+        <button class="btn btn--bloco" data-a="proximoPasso" id="btnPasso">${p === PASSOS.length - 1 ? 'Publicar meu perfil' : 'Continuar'}</button>
       </div>
     </div>`;
   }
@@ -931,7 +985,7 @@ const Telas = (() => {
       </label>`;
 
     if (n === 1) return `
-      <p class="corpo dim mb16">Digite o endereço e confira o pino no mapa. Você pode arrastá-lo para ajustar.</p>
+      <p class="corpo dim mb16">Digite o endereço e confira o pino no mapa. Você pode arrastar o mapa para ajustar.</p>
       <label class="campo">
         <span class="campo__rot">Endereço de atendimento</span>
         <span class="campo__cx"><input data-campo="endereco" value="${esc(P.endereco)}" placeholder="Rua, número e complemento"></span>
@@ -958,7 +1012,7 @@ const Telas = (() => {
             <p class="t2">Mostrar só o bairro</p>
             <p class="pequeno dim mt4">A cliente vê a região e o mapa aproximado, mas não o número da rua.</p>
           </div>
-          <button class="chave" role="switch" aria-checked="${!!P.soBairro}" data-a="alternarSoBairro"></button>
+          <button class="chave" role="switch" aria-checked="${!!P.soBairro}" data-a="alternarSoBairro" aria-label="Mostrar só o bairro"></button>
         </div>
       </div>
       <div class="cartao cartao--plano mt12" style="background:var(--dourado-fundo);border:0">
@@ -997,8 +1051,21 @@ const Telas = (() => {
         <button class="btn btn--secundario btn--bloco btn--pequeno" data-a="adicionarServico">${ic('mais', 18)} Adicionar serviço</button>
       </div>`;
 
-    if (n === 4) return `
-      <p class="corpo dim mb16">Marque os dias e as faixas em que você atende. É isso que liga o selo <b>“Aberta agora”</b> no seu perfil.</p>
+    if (n === 4) {
+      const F = P.fotos;
+      const bloco = (tipo, titulo, dica) => `
+        <h3 class="micro dim mb8 ${tipo === 'trabalho' ? 'mt24' : ''}">${titulo}</h3>
+        ${galeria(F[tipo], tipo, true) || `<p class="corpo dim2 mb8">${dica}</p>`}
+        <button class="btn btn--secundario btn--pequeno mt8" data-a="maisFoto" data-tipo="${tipo}"
+          aria-label="Adicionar foto: ${titulo}">${ic('camera', 17)} Adicionar foto</button>`;
+      return `
+      <p class="corpo dim mb16">Mostre o seu espaço e o seu trabalho — é o que faz a cliente se imaginar aí. <span class="dim2">No app real as fotos vêm da sua galeria; aqui montamos a vitrine com cartões de exemplo.</span></p>
+      ${bloco('local', 'O local de atendimento', 'A sala, a recepção, o ambiente que a cliente vai encontrar.')}
+      ${bloco('trabalho', 'O seu trabalho', 'A mesa montada, os materiais, o registro de uma sessão.')}`;
+    }
+
+    if (n === 5) return `
+      <p class="corpo dim mb16">Marque os dias e as faixas em que você atende — é o que liga o selo <b>“Aberta agora”</b> no seu perfil. Quem para pro almoço marca duas faixas no mesmo dia.</p>
       ${Dados.DIAS.map((d, i) => {
         const faixas = P.horarios.filter((h) => h.dia === i);
         return `<div class="cartao mb8">
@@ -1017,8 +1084,7 @@ const Telas = (() => {
             </div>`).join('')}
           ${faixas.length ? `
             <button class="btn btn--secundario btn--pequeno mt12" data-a="maisFaixa" data-dia="${i}"
-              aria-label="Acrescentar outra faixa de horário em ${d}">${ic('mais', 16)} Outra faixa</button>
-            <p class="micro dim mt8">Quem para para o almoço marca duas faixas.</p>` : ''}
+              aria-label="Acrescentar outra faixa de horário em ${d}">${ic('mais', 16)} Outra faixa</button>` : ''}
         </div>`;
       }).join('')}`;
 
@@ -1033,10 +1099,11 @@ const Telas = (() => {
         <span class="campo__cx"><span class="dim" style="font-weight:800">@</span><input data-campo="instagram" value="${esc(P.instagram)}" placeholder="seu.perfil"></span>
       </label>
       <h3 class="micro dim mt24 mb8">Como você atende</h3>
-      <div class="enrola mb24">
+      <div class="enrola mb8">
         <button class="chip" data-a="perfilAtendimento" data-tipo="presencial" aria-pressed="${P.atendimento.has('presencial')}">Presencial</button>
         <button class="chip" data-a="perfilAtendimento" data-tipo="online" aria-pressed="${P.atendimento.has('online')}">On-line</button>
       </div>
+      <p class="pequeno dim mb24" id="previaModalidade" aria-live="polite">No seu perfil vai aparecer: <b>${Dados.modalidade(P).titulo}</b>.</p>
       <div class="cartao cartao--plano" style="background:var(--sucesso-fundo);border:0">
         <p class="pequeno" style="color:#37624E">${ic('escudo', 14)} Depois de publicar, você pode pedir o <b>selo de Verificada</b> enviando seu documento e o certificado de formação.</p>
       </div>`;
@@ -1073,7 +1140,7 @@ const Telas = (() => {
       atendimento: Array.from(P.atendimento), whatsapp: P.whatsapp.replace(/\D/g, '') || '5551999999999', instagram: P.instagram || null,
       terapias: Array.from(P.terapias), bio: P.bio || 'Sua apresentação aparece aqui.',
       servicos: P.servicos.length ? P.servicos : [{ nome: 'Nenhum serviço cadastrado', duracao: 60, valor: 0 }],
-      horarios: P.horarios, avaliacoes: [],
+      horarios: P.horarios, avaliacoes: [], fotos: P.fotos,
     };
     t.total = 0; t.nota = 0;
     const valores = t.servicos.map((s) => s.valor);
@@ -1112,7 +1179,11 @@ const Telas = (() => {
             </div>
             <p class="corpo mt12">${esc(t.bio)}</p>
             <div class="enrola mt12">${t.terapias.map((x) => `<span class="etiqueta">${esc(x)}</span>`).join('') || '<span class="pequeno dim2">Nenhuma terapia marcada</span>'}</div>
+            <p class="pequeno dim mt12"><b>${Dados.modalidade(t).titulo}.</b> ${Dados.modalidade(t).texto}</p>
           </div>
+          ${t.fotos && (t.fotos.local.length || t.fotos.trabalho.length) ? `
+          <h3 class="micro dim mt16 mb8">O espaço e o trabalho</h3>
+          ${galeria([...t.fotos.local, ...t.fotos.trabalho], 'local')}` : ''}
         </div>
 
         <section class="secao" style="padding-top:0">
@@ -1235,7 +1306,7 @@ const Telas = (() => {
     esc, ic, svg, ICONES, avatar, estrelas, lotus, cabecalho, cartaoTerapeuta, selo, ondeFica, pinsHTML, pinoHTML, pinoSimplesHTML,
     entrar, telefone, codigo, papel, localizacao, cidades,
     raizCliente, abaMapa, abaLista, abaFavoritas, abaConta, barraAbas, localizacaoEmTexto, secaoConquistas,
-    folhaResumo, perfil, avaliar, filtros, denunciar, barraBusca, chipsFiltro, vazioBusca,
+    folhaResumo, perfil, avaliar, filtros, denunciar, barraBusca, chipsFiltro, vazioBusca, resultadosLista,
     raizTerapeuta, barraAbasTerapeuta, assistente, passo, abaMeuPerfil, abaAvaliacoesT,
     abaPainel, responder, perfilComoTerapeuta, PASSOS,
   };

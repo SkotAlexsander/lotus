@@ -14,7 +14,7 @@ de execução, não enfeite.
 | # | Arquivo | O que faz | Repetir é seguro? |
 |---|---|---|---|
 | 1 | `01-extensoes.sql` | PostGIS (busca por distância), unaccent, pg_trgm | sim |
-| 2 | `02-tabelas.sql` | as 10 tabelas e os índices | sim |
+| 2 | `02-tabelas.sql` | as 11 tabelas do núcleo (com `fotos_terapeuta`) e os índices | sim |
 | 3 | `03-funcoes-e-gatilhos.sql` | o que o banco faz sozinho | sim |
 | 4 | `04-rls.sql` | quem pode ver e mexer em quê | sim |
 | 5 | `05-catalogo.sql` | as 12 terapias | sim |
@@ -121,7 +121,7 @@ recebe o endereço completo de quem pediu para mostrar só o bairro.
 
 ```bash
 node banco/gerar_semente.js   # src/03-dados.js -> 06-semente.sql
-node banco/conferir.js        # 12 provas estáticas
+node banco/conferir.js        # 12 provas estáticas (16 tabelas)
 ```
 
 Digitar os dados de novo em SQL criaria uma segunda verdade — e duas verdades
