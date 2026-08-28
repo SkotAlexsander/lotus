@@ -63,7 +63,7 @@ ficção, nada sai do aparelho e nada fica gravado.
 | Plano B | sem internet ele cai num mapa desenhado por código e continua inteiro |
 | Conquistas | 7 selos que marcam a jornada real — no produto, quem concede é o banco, por gatilho |
 | Avisos | notificação nativa na **tela de bloqueio**, com política: silêncio à noite, no máximo 3 por sessão |
-| 101 provas | em navegador real: fluxos (70), GPS (13), conquistas (12), plano B (6) — com orçamentos de desempenho e 5 larguras |
+| 120 provas | em navegador real: fluxos (77), acessibilidade (15), GPS (12), conquistas (11), plano B (5) — com orçamentos de desempenho e 5 larguras |
 | Android | APK instalável, provado em emulador — inclusive o aviso no bloqueio |
 | Banco | SQL completo para Supabase + PostGIS: 15 tabelas, RLS em todas, gatilhos que concedem |
 | Documentação | [7 documentos](documentacao/00-INDICE.md) explicando como o código funciona e por quê |
@@ -95,6 +95,15 @@ publicada, o perfil no ar). Um selo que o aplicativo pudesse se dar não valeria
 nada. E o aviso sabe calar: às 23h a conquista aparece na tela, mas a
 notificação espera o dia começar.
 
+**Acessibilidade é medida, não presumida.** Todo controle tem nome para o leitor
+de tela, o layout aguenta a fonte do sistema a 200% sem cortar texto, navegar
+por teclado desenha um anel de foco de verdade — e a tela de baixo da pilha sai
+da árvore de acessibilidade, para o TalkBack não ler botões de uma tela que a
+pessoa não está vendo. São as 15 provas de `teste/acessibilidade.js`. (O
+isolamento é `aria-hidden` + `tabindex`, e não `inert`, de propósito: alternar
+`inert` sob uma tela com `transform` corrompia o toque num rolável do Chromium —
+intermitente, sem erro, com a tela pintando perfeitamente.)
+
 **A física do movimento é levada a sério.** Nada de transição de duração fixa: cada
 gesto é uma mola interrompível, que parte do valor que está na tela, herda a
 velocidade do dedo e projeta o momento para onde ele estava mandando a coisa. É o
@@ -125,7 +134,8 @@ teste/                as bancadas: fluxos, GPS, conquistas, plano B
 
 ```bash
 node montar.js                # src/ → index.html
-node teste/bancada.js         # 70 provas de fluxo e orçamentos (precisa de Playwright)
+node teste/bancada.js         # 77 provas de fluxo e orçamentos (precisa de Playwright)
+node teste/acessibilidade.js  # 15 provas do RNF02 — leitor de tela, 200%, foco
 node teste/gps.js             # 13 do GPS: permitiu perto, permitiu longe, negou
 node teste/conquistas.js      # 12 das conquistas e da política do aviso
 node teste/sem-mapa-real.js   # 6 do plano B: bloqueia o mapa real e confere

@@ -255,6 +255,20 @@ function checa(cond, nome, detalhe = '') {
   await clicar('#folha [data-a="limparFiltros"]', 450);
   const voltaram = await p.$$eval('.pin', (els) => els.filter((e) => e.style.pointerEvents !== 'none').length);
   checa(voltaram === 12, 'limpar filtros devolve os 12 pinos', `achei ${voltaram}`);
+
+  /* distância e presencial (RF06) — com os outros filtros limpos, de propósito:
+     Apometria ∩ 5 km dá ZERO nas fictícias, e uma prova de zero não distingue
+     "filtrou certo" de "quebrou tudo" */
+  await clicar('#folha [data-a="filtroDistancia"][data-km="5"]', 450);
+  const ate5 = await p.evaluate(() => Dados.listar().length);
+  checa(ate5 === 3, 'filtro de 5 km deixa 3 terapeutas', `achei ${ate5}`);
+  await clicar('#folha [data-a="filtroDistancia"][data-km="5"]', 450);   // toca de novo: desliga
+  // Todas as 12 fictícias atendem presencial — o chip ligado não pode sumir com ninguém
+  await clicar('#folha [data-a="filtroPresencial"]', 450);
+  const pres = await p.evaluate(() => Dados.listar().length);
+  checa(pres === 12, 'chip presencial ligado mantém as 12 (todas atendem presencial)', `achei ${pres}`);
+  await clicar('#folha [data-a="filtroPresencial"]', 450);              // desliga
+
   await clicar('#btnAplicar', 600);
 
   /* busca */
@@ -302,6 +316,15 @@ function checa(cond, nome, detalhe = '') {
   await p.waitForTimeout(300);
   checa(!!zapAberto && zapAberto.includes('5551997330288'), 'botão do WhatsApp aponta para o número certo', zapAberto || 'não abriu');
 
+  /* Instagram (RF09) — a persona 2 divulga só por lá; o botão tem de existir e apontar certo */
+  zapAberto = null;
+  const esperaInsta = ctx.waitForEvent('page', { timeout: 6000 }).catch(() => null);
+  await clicar('.rodape-fixo [data-a="instagram"]', 300);
+  await esperaInsta;
+  await p.waitForTimeout(300);
+  checa(!!zapAberto && zapAberto.includes('instagram.com/lucia.fontoura.apometria'),
+    'botão do Instagram abre o perfil certo', zapAberto || 'não abriu');
+
   /* avaliar */
   await clicar('[data-a="avaliar"]', 700);
   checa(await p.isVisible('#seletorEstrelas'), 'tela de avaliar abriu');
@@ -324,6 +347,23 @@ function checa(cond, nome, detalhe = '') {
   const depoisVoltar = await p.$$eval('.tela', (e) => e.length);
   checa(depoisVoltar === antesVoltar - 1, 'puxar da borda esquerda volta uma tela', `${antesVoltar} → ${depoisVoltar}`);
 
+  /* ⚠️ O gesto acima volta UMA tela: de "avaliar" para o perfil. As abas ficam
+     na tela RAIZ, atrás do perfil — e o rodapé do perfil cobre exatamente a
+     faixa delas. Esta bancada clicava na aba daqui mesmo e passava, porque sem
+     isolamento o clique atravessava a tela de cima. Não é o que uma pessoa
+     consegue fazer: o dedo dela bate no rodapé do perfil.
+
+     Desde que a tela de baixo virou `inert` (06-app.js, isolarAsDeBaixo), o
+     atalho deixou de funcionar — e ainda bem. Voltar de verdade até a raiz. */
+  for (let i = 0; i < 6; i++) {
+    const n = await p.$$eval('.tela', (e) => e.length);
+    if (n <= 1) break;
+    await p.evaluate(() => App.voltarSePuder());
+    await p.waitForTimeout(550);          // a mola precisa parar antes da próxima
+  }
+  const naRaiz = await p.$$eval('.tela', (e) => e.length);
+  checa(naRaiz === 1, 'voltar até a raiz deixa uma tela só', `${naRaiz} tela(s)`);
+
   /* favoritas e conta */
   await clicar('[data-aba="favoritas"]', 600);
   const nFav = await p.$$eval('[data-a="abrirPerfil"].cartao', (e) => e.length);
@@ -337,7 +377,63 @@ function checa(cond, nome, detalhe = '') {
   await foto('11-conta');
 
   /* relógio de demonstração muda o "aberta agora" */
-  await clicar('[data-a="alternarRelogio"]', 500);
+  try {
+    await clicar('[data-a="alternarRelogio"]', 500);
+  } catch (err) {
+    const amostra = () => p.evaluate(() => {
+      const bt = document.querySelector('[data-a="alternarRelogio"]');
+      const c = bt && bt.getBoundingClientRect();
+      const rolar = bt && bt.closest('.rolar');
+      const ances = [];
+      for (let e = bt; e && e !== document.documentElement; e = e.parentElement) {
+        const s = getComputedStyle(e);
+        ances.push({
+          quem: (e.dataset.a || e.dataset.tela || e.id || e.className || e.tagName).toString().slice(0, 26),
+          pe: s.pointerEvents, inert: !!e.inert, vis: s.visibility, disp: s.display,
+          transform: s.transform === 'none' ? '' : s.transform.slice(0, 34),
+        });
+      }
+      const pilhaHit = c ? document.elementsFromPoint(c.x + c.width / 2, c.y + c.height / 2)
+        .slice(0, 5).map((e) => (e.dataset.a || e.dataset.tela || e.className || e.tagName).toString().slice(0, 26)) : [];
+      return {
+        telas: Array.from(document.querySelectorAll('.tela')).map((t) => (t.dataset.tela || '?') + (t.inert ? ' INERT' : '')),
+        botao: c && { x: Math.round(c.x), y: Math.round(c.y), w: Math.round(c.width) },
+        rolar: rolar && { top: Math.round(rolar.scrollTop) },
+        pilhaHit, ances,
+      };
+    });
+    const a1 = await amostra();
+    console.log('\n  DIAGNÓSTICO t0:', JSON.stringify(a1));
+    const a3 = await p.evaluate(() => {
+      const hit = (x, y) => document.elementsFromPoint(x, y).slice(0, 3)
+        .map((e) => (e.dataset && (e.dataset.a || e.dataset.tela)) || e.className || e.tagName).map(String).map((s) => s.slice(0, 22));
+      const bt = document.querySelector('[data-a="alternarRelogio"]');
+      const c = bt.getBoundingClientRect();
+      const cx = c.x + c.width / 2, cy = c.y + c.height / 2;
+      const rolar = bt.closest('.rolar').getBoundingClientRect();
+      const antes = {
+        duplicatas: document.querySelectorAll('[data-a="alternarRelogio"]').length,
+        rolarRect: { y: Math.round(rolar.y), h: Math.round(rolar.height) },
+        hitNoBotao: hit(cx, cy),
+        hitTopoDaTela: hit(cx, 120),
+        hitMeioDaTela: hit(cx, 300),
+        hitNaAba: hit(60, 620),
+      };
+      // Teoria: o hit-test do rolável ficou com o recuo de 26% (~101px) preso.
+      // Se for isso, o botão "tocável" está ~101px à ESQUERDA do visível.
+      const varredura = [];
+      for (let x = 20; x <= 380; x += 45) varredura.push(x + ':' + hit(x, cy)[0]);
+      // E rolar 1px reconstrói os dados de rolagem do compositor?
+      const sc = bt.closest('.rolar');
+      sc.scrollTop -= 1;
+      const aposRolar1px = hit(cx, cy);
+      sc.scrollTop += 1;
+      return { antes, varredura, aposRolar1px };
+    });
+    console.log('  DIAGNÓSTICO sondas:', JSON.stringify(a3));
+    await foto('99-diagnostico-relogio');
+    throw err;
+  }
   checa(await p.isVisible('#demoDia'), 'o relógio de demonstração liga');
   await p.selectOption('#demoDia', '3');            // quarta
   await p.fill('#demoHora', '10:00');
@@ -401,6 +497,16 @@ function checa(cond, nome, detalhe = '') {
   await clicar('[data-a="alternarDia"][data-dia="4"]', 350);
   const nDias = await p.evaluate(() => Dados.estado.perfil.horarios.length);
   checa(nDias === 2, 'dois dias de atendimento marcados', `${nDias}`);
+
+  /* segunda faixa no mesmo dia — o intervalo de almoço (RF14) */
+  await clicar('[data-a="maisFaixa"][data-dia="2"]', 400);
+  const faixas = await p.evaluate(() => Dados.estado.perfil.horarios.filter((x) => x.dia === 2));
+  checa(faixas.length === 2, 'terça ganha uma segunda faixa de horário', JSON.stringify(faixas));
+  checa(faixas.length === 2 && faixas[1].abre > faixas[0].fecha,
+    'a segunda faixa começa depois da primeira terminar', `${faixas[0] && faixas[0].fecha} → ${faixas[1] && faixas[1].abre}`);
+  await clicar('[data-a="tirarFaixa"]', 400);
+  const sobrou = await p.evaluate(() => Dados.estado.perfil.horarios.filter((x) => x.dia === 2).length);
+  checa(sobrou === 1, 'tirar a faixa devolve a terça a uma faixa só', `${sobrou}`);
   await foto('15-assistente-horarios');
   await clicar('#btnPasso', 550);
 

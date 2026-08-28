@@ -48,7 +48,16 @@ const Dados = (() => {
         { nome: 'Limpeza energética do ambiente', duracao: 60, valor: 150, descricao: 'Casa ou local de trabalho' },
         { nome: 'Mesa radiônica (à distância)', duracao: 45, valor: 120 },
       ],
-      horarios: [h(1, '09:00', '18:00'), h(2, '09:00', '18:00'), h(3, '09:00', '18:00'), h(4, '09:00', '20:00'), h(5, '09:00', '17:00'), h(6, '09:00', '13:00')],
+      // Para o almoço — duas faixas no mesmo dia. É o caso comum de quem
+      // atende em consultório, e exercita a grade de horários de ponta a
+      // ponta: assistente, perfil, "aberta agora" e a semente do banco.
+      horarios: [
+        h(1, '09:00', '12:00'), h(1, '13:30', '18:00'),
+        h(2, '09:00', '12:00'), h(2, '13:30', '18:00'),
+        h(3, '09:00', '12:00'), h(3, '13:30', '18:00'),
+        h(4, '09:00', '12:00'), h(4, '13:30', '20:00'),
+        h(5, '09:00', '17:00'), h(6, '09:00', '13:00'),
+      ],
       avaliacoes: [
         { autor: 'Cláudia M.', nota: 5, dias: 6, texto: 'Saí leve de um jeito que não sei explicar direito. A Rosane escuta de verdade antes de começar, isso fez muita diferença pra mim.' , resposta: 'Que bom te receber, Cláudia. Fico à disposição.' },
         { autor: 'Juliana T.', nota: 5, dias: 19, texto: 'Consultório tranquilo, ela é pontual e explica cada etapa. Já indiquei pra duas amigas.' },
@@ -94,7 +103,11 @@ const Dados = (() => {
         { nome: 'Apometria on-line', duracao: 90, valor: 180 },
         { nome: 'Mesa radiônica', duracao: 60, valor: 150 },
       ],
-      horarios: [h(2, '08:00', '17:00'), h(3, '08:00', '17:00'), h(4, '08:00', '17:00'), h(5, '08:00', '12:00'), h(6, '08:00', '12:00')],
+      horarios: [
+        h(2, '08:00', '11:30'), h(2, '13:00', '17:00'),
+        h(3, '08:00', '11:30'), h(3, '13:00', '17:00'),
+        h(4, '08:00', '17:00'), h(5, '08:00', '12:00'), h(6, '08:00', '12:00'),
+      ],
       avaliacoes: [
         { autor: 'Sandra B.', nota: 5, dias: 11, texto: 'A sessão de duas horas parece muito, mas passa voando. Ela é extremamente cuidadosa.' },
         { autor: 'Elisandra K.', nota: 5, dias: 26, texto: 'Fiz on-line de Santa Maria e funcionou igual. Não achei que fosse dar certo à distância.' },
@@ -409,7 +422,7 @@ const Dados = (() => {
     aba: 'mapa',              // aba ativa do cliente
     modo: 'mapa',             // 'mapa' | 'lista'
     busca: '',
-    filtros: { terapias: new Set(), precoMax: null, notaMin: null, abertaAgora: false, online: false },
+    filtros: { terapias: new Set(), precoMax: null, notaMin: null, abertaAgora: false, online: false, presencial: false, distanciaMax: null },
     // Perfil que a terapeuta monta no assistente
     perfil: {
       nome: '', bio: '', foto: null, tom: 268,
@@ -503,6 +516,10 @@ const Dados = (() => {
         if (f.notaMin && t.nota < f.notaMin) return false;
         if (f.abertaAgora && !estaAberta(t)) return false;
         if (f.online && !t.atendimento.includes('online')) return false;
+        if (f.presencial && !t.atendimento.includes('presencial')) return false;
+        // A distância muda quando o GPS liga — o corte usa a distância VIVA,
+        // recalculada em recalcularDistancias(), não a do momento do filtro.
+        if (f.distanciaMax && t.distanciaKm > f.distanciaMax) return false;
         return true;
       })
       .sort((a, b) => a.distanciaKm - b.distanciaKm);
@@ -510,7 +527,7 @@ const Dados = (() => {
 
   function filtrosAtivos() {
     const f = estado.filtros;
-    return f.terapias.size + (f.precoMax ? 1 : 0) + (f.notaMin ? 1 : 0) + (f.abertaAgora ? 1 : 0) + (f.online ? 1 : 0);
+    return f.terapias.size + (f.precoMax ? 1 : 0) + (f.notaMin ? 1 : 0) + (f.abertaAgora ? 1 : 0) + (f.online ? 1 : 0) + (f.presencial ? 1 : 0) + (f.distanciaMax ? 1 : 0);
   }
 
   const porId = (id) => TERAPEUTAS.find((t) => t.id === id);

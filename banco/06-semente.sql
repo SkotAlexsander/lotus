@@ -782,21 +782,37 @@ insert into servicos (terapeuta_id, nome, descricao, duracao_min, valor)
   select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 'Mesa radiônica (à distância)', null, 45, 120
   where not exists (select 1 from servicos where terapeuta_id = '3ef906f0-882a-4f34-a2f9-9b40a651d747' and nome = 'Mesa radiônica (à distância)');
 insert into horarios (terapeuta_id, dia_semana, abre, fecha)
-  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 1, '09:00', '18:00'
+  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 1, '09:00', '12:00'
   where not exists (select 1 from horarios
                     where terapeuta_id = '3ef906f0-882a-4f34-a2f9-9b40a651d747' and dia_semana = 1 and abre = '09:00');
 insert into horarios (terapeuta_id, dia_semana, abre, fecha)
-  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 2, '09:00', '18:00'
+  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 1, '13:30', '18:00'
+  where not exists (select 1 from horarios
+                    where terapeuta_id = '3ef906f0-882a-4f34-a2f9-9b40a651d747' and dia_semana = 1 and abre = '13:30');
+insert into horarios (terapeuta_id, dia_semana, abre, fecha)
+  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 2, '09:00', '12:00'
   where not exists (select 1 from horarios
                     where terapeuta_id = '3ef906f0-882a-4f34-a2f9-9b40a651d747' and dia_semana = 2 and abre = '09:00');
 insert into horarios (terapeuta_id, dia_semana, abre, fecha)
-  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 3, '09:00', '18:00'
+  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 2, '13:30', '18:00'
+  where not exists (select 1 from horarios
+                    where terapeuta_id = '3ef906f0-882a-4f34-a2f9-9b40a651d747' and dia_semana = 2 and abre = '13:30');
+insert into horarios (terapeuta_id, dia_semana, abre, fecha)
+  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 3, '09:00', '12:00'
   where not exists (select 1 from horarios
                     where terapeuta_id = '3ef906f0-882a-4f34-a2f9-9b40a651d747' and dia_semana = 3 and abre = '09:00');
 insert into horarios (terapeuta_id, dia_semana, abre, fecha)
-  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 4, '09:00', '20:00'
+  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 3, '13:30', '18:00'
+  where not exists (select 1 from horarios
+                    where terapeuta_id = '3ef906f0-882a-4f34-a2f9-9b40a651d747' and dia_semana = 3 and abre = '13:30');
+insert into horarios (terapeuta_id, dia_semana, abre, fecha)
+  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 4, '09:00', '12:00'
   where not exists (select 1 from horarios
                     where terapeuta_id = '3ef906f0-882a-4f34-a2f9-9b40a651d747' and dia_semana = 4 and abre = '09:00');
+insert into horarios (terapeuta_id, dia_semana, abre, fecha)
+  select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 4, '13:30', '20:00'
+  where not exists (select 1 from horarios
+                    where terapeuta_id = '3ef906f0-882a-4f34-a2f9-9b40a651d747' and dia_semana = 4 and abre = '13:30');
 insert into horarios (terapeuta_id, dia_semana, abre, fecha)
   select '3ef906f0-882a-4f34-a2f9-9b40a651d747', 5, '09:00', '17:00'
   where not exists (select 1 from horarios
@@ -950,13 +966,21 @@ insert into servicos (terapeuta_id, nome, descricao, duracao_min, valor)
   select '76a2417e-35d9-4142-a5b7-a4d57774b6ff', 'Mesa radiônica', null, 60, 150
   where not exists (select 1 from servicos where terapeuta_id = '76a2417e-35d9-4142-a5b7-a4d57774b6ff' and nome = 'Mesa radiônica');
 insert into horarios (terapeuta_id, dia_semana, abre, fecha)
-  select '76a2417e-35d9-4142-a5b7-a4d57774b6ff', 2, '08:00', '17:00'
+  select '76a2417e-35d9-4142-a5b7-a4d57774b6ff', 2, '08:00', '11:30'
   where not exists (select 1 from horarios
                     where terapeuta_id = '76a2417e-35d9-4142-a5b7-a4d57774b6ff' and dia_semana = 2 and abre = '08:00');
 insert into horarios (terapeuta_id, dia_semana, abre, fecha)
-  select '76a2417e-35d9-4142-a5b7-a4d57774b6ff', 3, '08:00', '17:00'
+  select '76a2417e-35d9-4142-a5b7-a4d57774b6ff', 2, '13:00', '17:00'
+  where not exists (select 1 from horarios
+                    where terapeuta_id = '76a2417e-35d9-4142-a5b7-a4d57774b6ff' and dia_semana = 2 and abre = '13:00');
+insert into horarios (terapeuta_id, dia_semana, abre, fecha)
+  select '76a2417e-35d9-4142-a5b7-a4d57774b6ff', 3, '08:00', '11:30'
   where not exists (select 1 from horarios
                     where terapeuta_id = '76a2417e-35d9-4142-a5b7-a4d57774b6ff' and dia_semana = 3 and abre = '08:00');
+insert into horarios (terapeuta_id, dia_semana, abre, fecha)
+  select '76a2417e-35d9-4142-a5b7-a4d57774b6ff', 3, '13:00', '17:00'
+  where not exists (select 1 from horarios
+                    where terapeuta_id = '76a2417e-35d9-4142-a5b7-a4d57774b6ff' and dia_semana = 3 and abre = '13:00');
 insert into horarios (terapeuta_id, dia_semana, abre, fecha)
   select '76a2417e-35d9-4142-a5b7-a4d57774b6ff', 4, '08:00', '17:00'
   where not exists (select 1 from horarios

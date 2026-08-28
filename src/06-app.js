@@ -81,11 +81,18 @@ const App = (() => {
   function animarPara(alvo, { velocidade = 0 } = {}) {
     const item = pilha[pilha.length - 1];
     if (!item) return;
+    // Fechando: a tela de baixo vai virar a ativa. Libera JÁ, uma vez — quem
+    // solta o gesto e toca em seguida não pode bater numa tela ainda isolada.
+    // Se a pessoa desistir (a mola termina em 1), o aoParar re-isola.
+    if (alvo === 0 && item.anterior) liberar(item.anterior.el);
     if (!transicao) {
       transicao = new Fisica.Mola({
         amortecimento: 1, resposta: 0.42, epsilonX: 0.002, epsilonV: 0.02,
         aoAtualizar: (v) => aplicarProgresso(v),
-        aoParar: (v) => { if (v === 0) desmontarTopo(); },
+        // Terminou em 0: a tela de cima saiu. Terminou em 1: a pessoa desistiu
+        // de voltar, e o isolamento tem de ser recalculado (a de baixo volta a
+        // ser inerte).
+        aoParar: (v) => { if (v === 0) desmontarTopo(); else aoMudarPilha(); },
       });
     }
     if (Fisica.menosMovimento()) {
@@ -110,6 +117,41 @@ const App = (() => {
 
   function aoMudarPilha() {
     bordaVoltar.hidden = pilha.length <= 1;
+    isolarAsDeBaixo();
+  }
+
+  /* Só a tela do topo é operável. As de baixo continuam no DOM — é o que
+     permite a transição e o gesto de voltar — mas precisam sair da árvore de
+     acessibilidade: sem isto, o Tab e o leitor de tela passeiam por botões de
+     uma tela que a pessoa não está vendo. Quem enxerga e usa o dedo nunca
+     percebe; quem usa TalkBack ouve "Continuar com Google" no meio do perfil.
+
+     ⚠️ De propósito, isto NÃO usa `inert`. `inert` reconstrói o estado de
+     camadas do Chromium, e alterná-lo numa tela que está com transform (o
+     recuo de 26%) e contém um rolável composto deixava o hit-test do rolável
+     APONTANDO PARA O LUGAR ERRADO — a tela pintava certo e nenhum toque nela
+     funcionava mais, de forma intermitente e sem erro nenhum. `aria-hidden` +
+     `tabindex` fazem o mesmo isolamento sem tocar em camada de pintura. */
+  function liberar(el) {
+    el.removeAttribute('aria-hidden');
+    el.querySelectorAll('[data-tab-guardado]').forEach((x) => {
+      const v = x.getAttribute('data-tab-guardado');
+      if (v) x.setAttribute('tabindex', v); else x.removeAttribute('tabindex');
+      x.removeAttribute('data-tab-guardado');
+    });
+  }
+  function isolar(el) {
+    el.setAttribute('aria-hidden', 'true');
+    el.querySelectorAll('button, a[href], input, select, textarea, [tabindex]').forEach((x) => {
+      if (x.hasAttribute('data-tab-guardado')) return;
+      x.setAttribute('data-tab-guardado', x.getAttribute('tabindex') || '');
+      x.setAttribute('tabindex', '-1');
+    });
+  }
+  function isolarAsDeBaixo() {
+    pilha.forEach((item, i) => {
+      (i === pilha.length - 1 ? liberar : isolar)(item.el);
+    });
   }
 
   /* Troca a raiz inteira (ex.: cliente → terapeuta), com dissolução curta */
@@ -739,9 +781,11 @@ const App = (() => {
         E.relogio = { ...(E.relogio || { hora: 10, minuto: 0 }), dia: Number(e.target.value) };
         avisarRelogio();
       }
+      /* Endereça a faixa pelo ÍNDICE, não pelo dia: desde que um dia pode ter
+         mais de uma faixa (quem para para o almoço), procurar pelo dia acha
+         sempre a primeira e a segunda nunca seria editável. */
       if (e.target.dataset.a === 'horaAbre' || e.target.dataset.a === 'horaFecha') {
-        const dia = Number(e.target.dataset.dia);
-        const h = E.perfil.horarios.find((x) => x.dia === dia);
+        const h = E.perfil.horarios[Number(e.target.dataset.ix)];
         if (h) h[e.target.dataset.a === 'horaAbre' ? 'abre' : 'fecha'] = e.target.value;
       }
     });
@@ -810,6 +854,16 @@ const App = (() => {
         Conquistas.registrar('contato');
         break;
       }
+      /* O Instagram é o RF09 junto com o WhatsApp — e para a persona 2 (que
+         hoje divulga SÓ por lá) é onde ela mostra o trabalho. Vai pelo mesmo
+         caminho de saída do app: no Android, a ponte nativa; no navegador,
+         aba nova. O app do Instagram captura este endereço quando instalado. */
+      case 'instagram': {
+        const t = Dados.porId(id);
+        avisar(`Abrindo o Instagram de ${t.nome.split(' ')[0]}…`, 'instagram');
+        abrirFora('https://instagram.com/' + t.instagram);
+        break;
+      }
       case 'avaliar': abrir('avaliar', { id }); break;
       case 'nota': {
         const n = Number(el.dataset.n);
@@ -849,6 +903,12 @@ const App = (() => {
       case 'fecharFolha': fecharFolha(); break;
       case 'filtroAberta': E.filtros.abertaAgora = !E.filtros.abertaAgora; recarregarFiltros(); break;
       case 'filtroOnline':  E.filtros.online = !E.filtros.online; recarregarFiltros(); break;
+      case 'filtroPresencial': E.filtros.presencial = !E.filtros.presencial; recarregarFiltros(); break;
+      case 'filtroDistancia': {
+        const km = Number(el.dataset.km);
+        E.filtros.distanciaMax = E.filtros.distanciaMax === km ? null : km;
+        recarregarFiltros(); break;
+      }
       case 'filtroNota':    E.filtros.notaMin = E.filtros.notaMin === 4 ? null : 4; recarregarFiltros(); break;
       case 'filtroNotaValor': {
         const n = Number(el.dataset.nota);
@@ -864,7 +924,7 @@ const App = (() => {
         recarregarFiltros(); break;
       }
       case 'limparFiltros':
-        E.filtros = { terapias: new Set(), precoMax: null, notaMin: null, abertaAgora: false, online: false };
+        E.filtros = { terapias: new Set(), precoMax: null, notaMin: null, abertaAgora: false, online: false, presencial: false, distanciaMax: null };
         E.busca = '';
         recarregarFiltros(); break;
       case 'limparBusca': {
@@ -964,6 +1024,26 @@ const App = (() => {
         else P.horarios.push({ dia, abre: '09:00', fecha: '18:00' });
         recarregarPasso(); break;
       }
+      /* Segunda faixa no mesmo dia. Começa DEPOIS da última que já existe —
+         quem para o almoço fecha 12h e volta 13h30, então propor 09:00 de novo
+         obrigaria a corrigir os dois campos toda vez. */
+      case 'maisFaixa': {
+        const dia = Number(el.dataset.dia);
+        const doDia = P.horarios.filter((x) => x.dia === dia);
+        const ultima = doDia[doDia.length - 1];
+        const somar = (hhmm, minutos) => {
+          const [h, m] = hhmm.split(':').map(Number);
+          const t = Math.min(23 * 60 + 59, h * 60 + m + minutos);
+          return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+        };
+        const abre = ultima ? somar(ultima.fecha, 90) : '13:30';
+        P.horarios.push({ dia, abre, fecha: somar(abre, 4 * 60) });
+        recarregarPasso(); break;
+      }
+      case 'tirarFaixa':
+        P.horarios.splice(Number(el.dataset.ix), 1);
+        recarregarPasso(); break;
+
       case 'alternarSoBairro':
         P.soBairro = !P.soBairro;
         el.setAttribute('aria-checked', String(P.soBairro)); break;

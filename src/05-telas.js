@@ -627,6 +627,12 @@ const Telas = (() => {
           style="width:52px;height:52px;border-radius:var(--r-m);box-shadow:inset 0 0 0 1.5px var(--linha-forte);color:${fav ? 'var(--alerta)' : 'var(--texto)'}">
           ${svg(ICONES.coracao, 23, fav ? 'fill="currentColor"' : '')}
         </button>
+        ${t.instagram ? `
+        <button class="redondo" data-a="instagram" data-id="${t.id}"
+          aria-label="Abrir o Instagram de ${t.nome}, @${t.instagram}"
+          style="width:52px;height:52px;border-radius:var(--r-m);box-shadow:inset 0 0 0 1.5px var(--linha-forte)">
+          ${svg(ICONES.instagram, 23)}
+        </button>` : ''}
         <button class="btn btn--zap cresce" data-a="whatsapp" data-id="${t.id}">${ic('zap', 21)} Chamar no WhatsApp</button>
       </div>
     </div>`;
@@ -837,9 +843,15 @@ const Telas = (() => {
         ${notas.map((n) => `<button class="chip" data-a="filtroNotaValor" data-nota="${n}" aria-pressed="${f.notaMin === n}">⭐ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}+</button>`).join('')}
       </div>
 
+      <h3 class="micro dim mb8">Distância até</h3>
+      <div class="enrola mb24">
+        ${[1, 3, 5, 10].map((km) => `<button class="chip" data-a="filtroDistancia" data-km="${km}" aria-pressed="${f.distanciaMax === km}">${km} km</button>`).join('')}
+      </div>
+
       <h3 class="micro dim mb8">Atendimento</h3>
       <div class="enrola mb24">
         <button class="chip" data-a="filtroAberta" aria-pressed="${f.abertaAgora}">Aberta agora</button>
+        <button class="chip" data-a="filtroPresencial" aria-pressed="${f.presencial}">Presencial</button>
         <button class="chip" data-a="filtroOnline" aria-pressed="${f.online}">Atende on-line</button>
       </div>
 
@@ -991,12 +1003,19 @@ const Telas = (() => {
             <span class="t2">${d}</span>
             <button class="chave" role="switch" aria-checked="${faixas.length > 0}" data-a="alternarDia" data-dia="${i}" aria-label="Atender ${d}"></button>
           </div>
-          ${faixas.length ? `
+          ${faixas.map((f, k) => `
             <div class="linha gap6 mt12">
-              <span class="campo__cx" style="min-height:44px"><input type="time" value="${faixas[0].abre}" data-a="horaAbre" data-dia="${i}" style="flex:1;padding:10px 0"></span>
+              <span class="campo__cx" style="min-height:44px"><input type="time" value="${f.abre}" data-a="horaAbre" data-ix="${P.horarios.indexOf(f)}" aria-label="${d}, faixa ${k + 1}: abre às" style="flex:1;padding:10px 0"></span>
               <span class="dim">às</span>
-              <span class="campo__cx" style="min-height:44px"><input type="time" value="${faixas[0].fecha}" data-a="horaFecha" data-dia="${i}" style="flex:1;padding:10px 0"></span>
-            </div>` : ''}
+              <span class="campo__cx" style="min-height:44px"><input type="time" value="${f.fecha}" data-a="horaFecha" data-ix="${P.horarios.indexOf(f)}" aria-label="${d}, faixa ${k + 1}: fecha às" style="flex:1;padding:10px 0"></span>
+              ${faixas.length > 1 ? `<button class="redondo" data-a="tirarFaixa" data-ix="${P.horarios.indexOf(f)}"
+                  aria-label="Tirar a faixa ${k + 1} de ${d}"
+                  style="width:44px;height:44px;border-radius:var(--r-m);box-shadow:inset 0 0 0 1.5px var(--linha-forte);color:var(--texto-2)">${svg(ICONES.fechar, 17)}</button>` : ''}
+            </div>`).join('')}
+          ${faixas.length ? `
+            <button class="btn btn--secundario btn--pequeno mt12" data-a="maisFaixa" data-dia="${i}"
+              aria-label="Acrescentar outra faixa de horário em ${d}">${ic('mais', 16)} Outra faixa</button>
+            <p class="micro dim mt8">Quem para para o almoço marca duas faixas.</p>` : ''}
         </div>`;
       }).join('')}`;
 

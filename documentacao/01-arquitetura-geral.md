@@ -87,6 +87,27 @@ antes de fechar o app — e só fecha quando a página diz que não há para ond
 voltar. Fechar o app no meio de um fluxo é a maior irritação de WebView mal
 feito.
 
+### As telas de baixo são isoladas — e sem `inert`, de propósito
+
+As telas anteriores continuam no DOM (é o que permite a transição e o gesto de
+voltar), mas saem da árvore de acessibilidade: sem isso, o Tab e o leitor de
+tela passeiam por botões de uma tela que a pessoa não está vendo. Quem enxerga
+nunca percebe; quem usa TalkBack ouve "Continuar com Google" no meio do perfil.
+
+O isolamento é `aria-hidden="true"` + `tabindex="-1"` (guardando o valor
+original em `data-tab-guardado`), aplicado por `isolarAsDeBaixo()` a cada
+mudança de pilha. **`inert` faria isso numa linha e não é usado**: alternar
+`inert` numa tela que está com `transform` (o recuo de 26%) e contém um rolável
+corrompia o hit-test do rolável no Chromium — a tela pintava certo e nenhum
+toque nela funcionava mais, de forma intermitente e sem nenhum erro. A bancada
+de 71 provas falhava 1 vez em 3; sem `inert`, 0 em 7. O detalhe fino está em
+`06-app.js`, no comentário de `isolarAsDeBaixo`.
+
+Um cuidado de tempo: quando um fechamento **começa** (gesto solto ou botão
+voltar), a tela de baixo é liberada imediatamente, não quando a mola para —
+senão quem toca logo depois de soltar bate numa tela ainda isolada por ~400 ms.
+Se a pessoa desiste no meio do gesto, o `aoParar` da mola re-isola.
+
 ## 4. Os montadores
 
 ### `montar.js` — src/ → prototipo/
