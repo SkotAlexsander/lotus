@@ -77,7 +77,13 @@ const MapaReal = (() => {
       // O pino do mapa real não contra-escala: o MapLibre já mantém o marcador
       // do mesmo tamanho em qualquer zoom.
       el2.style.setProperty('--z', '1');
-      el2.style.position = 'relative';
+      /* ⚠️ ABSOLUTE, nunca relative: o translate do MapLibre parte da POSIÇÃO
+         BASE do elemento. `relative` deixa o marcador no FLUXO do contêiner —
+         cada um empurrado pelo anterior — e o desvio soma: o 1º pino caía
+         certo por sorte, o 2º ficava 46px à direita, o 3º 92px, e o ponto
+         azul 122px abaixo. Constante em px de TELA: ao dar zoom, a rua
+         embaixo do marcador trocava. Medido pino a pino contra project(). */
+      el2.style.position = 'absolute';
       el2.style.margin = '0';
       el2.addEventListener('click', (e) => {
         e.stopPropagation();           // senão o toque também conta como "fundo"
@@ -99,7 +105,7 @@ const MapaReal = (() => {
       const eu = document.createElement('div');
       eu.className = 'eu';
       eu.style.setProperty('--z', '1');
-      eu.style.position = 'relative';
+      eu.style.position = 'absolute';   // mesma regra dos pinos: base na origem
       eu.style.margin = '0';
       eu.innerHTML = '<div class="eu__halo"></div><div class="eu__nucleo"></div>';
       marcadorEu = new maplibregl.Marker({ element: eu, anchor: 'center' })
@@ -230,6 +236,9 @@ const MapaReal = (() => {
       ajustarZoom: (fator) => mapa.easeTo({ zoom: mapa.getZoom() + (fator > 1 ? 1 : -1) }),
       destruir: () => { try { mapa.remove(); } catch (_) {} },
       get zoom() { return mapa.getZoom(); },
+      // Exposta para a BANCADA: é o que permite comparar o pixel do ponto azul
+      // com a projeção matemática do lat/lng em cada zoom. O app não a usa.
+      get instancia() { return mapa; },
       get bruto() { return mapa; },
     };
   }
@@ -253,7 +262,10 @@ const MapaReal = (() => {
     if (!op.arrastavel) {
       const pino = document.createElement('div');
       pino.innerHTML = Telas.pinoSimplesHTML();
-      new maplibregl.Marker({ element: pino.firstElementChild, anchor: 'bottom' })
+      const pinoEl = pino.firstElementChild;
+      pinoEl.style.position = 'absolute';   // única no contêiner: certa "por sorte" — blindada
+      pinoEl.style.margin = '0';
+      new maplibregl.Marker({ element: pinoEl, anchor: 'bottom' })
         .setLngLat([lng, lat]).addTo(mapa);
     } else if (op.aoMover) {
       // No modo arrastável o pino fica FIXO no centro da moldura (desenhado por

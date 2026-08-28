@@ -64,7 +64,7 @@ ficção, nada sai do aparelho e nada fica gravado.
 | Vitrine | galerias do local e do trabalho no perfil, e a modalidade dita por extenso: presencial, on-line ou híbrido |
 | Conquistas | 7 selos que marcam a jornada real — no produto, quem concede é o banco, por gatilho |
 | Avisos | notificação nativa na **tela de bloqueio**, com política: silêncio à noite, no máximo 3 por sessão |
-| 132 provas | em navegador real: fluxos (85), acessibilidade (15), GPS (12), conquistas (11), plano B (5), carga (4) — com orçamentos de desempenho e 5 larguras |
+| 135 provas | em navegador real: fluxos (85), acessibilidade (15), GPS (15), conquistas (11), plano B (5), carga (4) — com orçamentos de desempenho e 5 larguras |
 | Android | APK instalável, provado em emulador — o aviso no bloqueio e o VOLTAR físico na ordem certa |
 | Banco | SQL completo para Supabase + PostGIS: 16 tabelas, RLS em todas, gatilhos que concedem |
 | Documentação | [7 documentos](documentacao/00-INDICE.md) explicando como o código funciona e por quê |
@@ -77,7 +77,13 @@ Um único arquivo HTML, sem framework e sem dependência externa. A razão é pr
 o protótipo precisa abrir com duplo clique, funcionar sem internet e caber num link
 que se manda para uma terapeuta testar no celular dela.
 
-**O ponto azul não mente.** A localização vem do aparelho, e o círculo em volta
+**O ponto azul não mente — e não sai do lugar.** Há prova comparando o pixel do
+marcador com a projeção matemática do lat/lng em dois zooms: desvio < 2px, parado
+e no meio da animação. (Um `position: relative` no elemento do marcador punha os
+marcadores no fluxo do layout — o 2º pino 46px à direita, o ponto azul 122px abaixo,
+constantes em pixels de tela: ao dar zoom, a rua embaixo trocava. Medido e morto.)
+
+**O círculo de precisão é medido.** A localização vem do aparelho, e o círculo em volta
 é o raio de precisão que o GPS informou — convertido de metros para pixels a cada
 zoom. Desenhar só o ponto afirmaria uma certeza que o aparelho não tem, e num app
 cuja pergunta é "quem está perto de mim", 30 m e 2 km dão respostas diferentes.

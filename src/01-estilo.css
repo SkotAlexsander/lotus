@@ -583,7 +583,7 @@ a { color: inherit; }
 /* Dentro de um marcador do MapLibre o pino não se posiciona sozinho nem
    contra-escala: quem cuida disso é o marcador. */
 .maplibregl-marker .pin,
-.maplibregl-marker .eu { position: relative; margin: 0; transform: none; }
+/* (regra removida: o .eu É o próprio .maplibregl-marker — o seletor descendente nunca casava; o posicionamento é inline, em 04b-mapa-real.js) */
 .maplibregl-marker .pin[data-sel="1"] { z-index: 5; }
 
 /* No mini-mapa o crédito volta para o canto de baixo do próprio quadro */

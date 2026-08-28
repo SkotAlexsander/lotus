@@ -100,6 +100,48 @@ async function atePermitir(p) {
       `Lúcia ${antes.lucia}→${depois.lucia} km · Rosane ${antes.rosane}→${depois.rosane} km`);
     checa(depois.primeira === 'Lúcia Fontoura',
       'a lista reordena: a mais perto agora é quem atende no bairro', depois.primeira);
+
+    /* O ponto azul fica PREGADO NO CHÃO em qualquer zoom. O marcador do
+       MapLibre parte da posição-base do elemento: com `position: relative` ele
+       entrava no FLUXO do contêiner e cada marcador era empurrado pelo
+       anterior — o ponto azul ficou 122px abaixo do lugar, constante em px de
+       TELA, então ao dar zoom a rua embaixo dele trocava. Esta prova compara
+       o pixel do marcador com a projeção matemática em dois zooms. */
+    if (await p.evaluate(() => !!(App.mapa && App.mapa.instancia))) {
+      // O marcador só nasce quando o ESTILO do mapa termina de carregar —
+      // medir antes disso é medir o nada (foi o primeiro erro desta prova).
+      const montou = await p.waitForFunction(
+        () => document.querySelector('.eu') && document.querySelector('.pin[data-id="t1"]'),
+        null, { timeout: 15000 }).then(() => true).catch(() => false);
+      checa(montou, 'o ponto azul e os pinos montaram no mapa real');
+      const desvioEm = async (z) => {
+        if (!montou) return { eu: 999, pino: 999 };
+        await p.evaluate((zz) => App.mapa.instancia.setZoom(zz), z);
+        await p.waitForTimeout(420);
+        return p.evaluate(() => {
+          const inst = App.mapa.instancia;
+          const cv = inst.getCanvas().getBoundingClientRect();
+          const pt = inst.project([Dados.EU.lng, Dados.EU.lat]);
+          const eu = document.querySelector('.eu').getBoundingClientRect();
+          const t1 = Dados.porId('t1');
+          const pin = document.querySelector('.pin[data-id="t1"]').getBoundingClientRect();
+          const pp = inst.project([t1.lng, t1.lat]);
+          return {
+            eu: Math.hypot(eu.x + eu.width / 2 - pt.x - cv.x, eu.y + eu.height / 2 - pt.y - cv.y),
+            pino: Math.hypot(pin.x + pin.width / 2 - pp.x - cv.x, pin.y + pin.height - pp.y - cv.y),
+          };
+        });
+      };
+      const perto = await desvioEm(16);
+      const longe = await desvioEm(12.5);
+      checa(perto.eu < 2 && longe.eu < 2,
+        'o ponto azul não se move ao dar zoom (pregado na projeção)',
+        `desvio ${perto.eu.toFixed(1)}px @16 · ${longe.eu.toFixed(1)}px @12.5`);
+      checa(perto.pino < 2 && longe.pino < 2,
+        'os pinos também ficam pregados no lugar',
+        `desvio ${perto.pino.toFixed(1)}px @16 · ${longe.pino.toFixed(1)}px @12.5`);
+    }
+
     checa(erros.length === 0, 'nenhum erro de JavaScript', erros.slice(0, 2).join(' | '));
 
     /* ⚠️ Fotografar antes do estilo baixar rende um retângulo cinza — e foi
