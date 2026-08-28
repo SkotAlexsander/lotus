@@ -64,8 +64,8 @@ ficção, nada sai do aparelho e nada fica gravado.
 | Vitrine | galerias do local e do trabalho no perfil, e a modalidade dita por extenso: presencial, on-line ou híbrido |
 | Conquistas | 7 selos que marcam a jornada real — no produto, quem concede é o banco, por gatilho |
 | Avisos | notificação nativa na **tela de bloqueio**, com política: silêncio à noite, no máximo 3 por sessão |
-| 128 provas | em navegador real: fluxos (85), acessibilidade (15), GPS (12), conquistas (11), plano B (5) — com orçamentos de desempenho e 5 larguras |
-| Android | APK instalável, provado em emulador — inclusive o aviso no bloqueio |
+| 132 provas | em navegador real: fluxos (85), acessibilidade (15), GPS (12), conquistas (11), plano B (5), carga (4) — com orçamentos de desempenho e 5 larguras |
+| Android | APK instalável, provado em emulador — o aviso no bloqueio e o VOLTAR físico na ordem certa |
 | Banco | SQL completo para Supabase + PostGIS: 16 tabelas, RLS em todas, gatilhos que concedem |
 | Documentação | [7 documentos](documentacao/00-INDICE.md) explicando como o código funciona e por quê |
 

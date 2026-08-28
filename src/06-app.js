@@ -831,7 +831,9 @@ const App = (() => {
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { if (folhaAberta) fecharFolha(); else voltar(); }
+      // Mesma ordem do VOLTAR do Android — a folha atrás de uma tela
+      // empilhada NÃO é a primeira a fechar
+      if (e.key === 'Escape') voltarSePuder();
       /* Cartões são <article role="button"> — e role="button" NÃO ganha o
          click sintético que um <button> de verdade ganha. Sem isto, Enter e
          espaço num cartão focado não abrem nada. */
@@ -1257,8 +1259,14 @@ const App = (() => {
      true se havia para onde voltar — fechar no meio de um fluxo é a maior
      irritação de app feito em WebView. */
   function voltarSePuder() {
-    if (folhaAberta) { fecharFolha(); return true; }
+    /* A ordem importa: a folha só é "a coisa de cima" quando a RAIZ está no
+       topo da pilha. Com um perfil empilhado, fechar primeiro a folha —
+       invisível atrás dele — fazia o VOLTAR do Android parecer morto: um
+       aperto não mudava nada na tela, só o segundo fechava o perfil.
+       (Achado pela prova de carga, 20 aberturas seguidas.) */
+    if (folhaAberta && pilha.length === 1) { fecharFolha(); return true; }
     if (pilha.length > 1) { voltar(); return true; }
+    if (folhaAberta) { fecharFolha(); return true; }
     return false;
   }
 

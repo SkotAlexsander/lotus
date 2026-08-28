@@ -85,7 +85,10 @@ O que faz isso parecer aplicativo e não site:
 No Android, o botão VOLTAR do sistema pergunta à página (`App.voltarSePuder()`)
 antes de fechar o app — e só fecha quando a página diz que não há para onde
 voltar. Fechar o app no meio de um fluxo é a maior irritação de WebView mal
-feito.
+feito. **A ordem interna importa:** a folha só é "a coisa de cima" quando a
+raiz está no topo da pilha — fechar primeiro uma folha invisível atrás de um
+perfil fazia o VOLTAR parecer morto por um aperto (achado pela prova de carga,
+consertado e provado com o botão físico no emulador).
 
 ### As telas de baixo são isoladas — e sem `inert`, de propósito
 
